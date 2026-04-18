@@ -1,0 +1,117 @@
+{% extends "sidebar.html" %}
+
+{% block content %}
+<div class="container-fluid pt-4">
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2 class="fw-bold"><i class="bi bi-bank me-2 text-success"></i>Financial Management</h2>
+            <p class="text-muted">Monitor barangay budget, expenses, and revenue collections.</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <button class="btn btn-success btn-sm" type="button">
+                <i class="bi bi-plus-circle me-1"></i> Record New Transaction
+            </button>
+            <button class="btn btn-outline-dark btn-sm" type="button">
+                <i class="bi bi-printer me-1"></i> Print Report
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm border-start border-primary border-4">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Current Balance</h6>
+                    <h2 class="fw-bold mb-0">₱ 450,230.00</h2>
+                    <span class="text-success small"><i class="bi bi-arrow-up"></i> +2.5% from last month</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm border-start border-success border-4">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Total Revenue (MTD)</h6>
+                    <h2 class="fw-bold mb-0">₱ 85,400.00</h2>
+                    <span class="text-muted small">Month-to-Date Collections</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm border-start border-danger border-4">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Total Expenses (MTD)</h6>
+                    <h2 class="fw-bold mb-0">₱ 32,150.00</h2>
+                    <span class="text-danger small"><i class="bi bi-arrow-down"></i> 12% Allocated for Utils</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold">Recent Transactions</h5>
+            <div class="dropdown">
+                <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Filter by Type
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Revenue</a></li>
+                    <li><a class="dropdown-item" href="#">Expense</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Reference No.</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="ps-4">April 18, 2026</td>
+                            <td>Brgy Clearance Fees</td>
+                            <td>Collection</td>
+                            <td>OR-99821</td>
+                            <td class="text-success fw-bold">+ ₱ 1,250.00</td>
+                            <td><span class="badge rounded-pill bg-success">Completed</span></td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4">April 15, 2026</td>
+                            <td>Electricity Bill - Brgy Hall</td>
+                            <td>Utilities</td>
+                            <td>BILL-4452</td>
+                            <td class="text-danger fw-bold">- ₱ 5,400.00</td>
+                            <td><span class="badge rounded-pill bg-success">Paid</span></td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4">April 12, 2026</td>
+                            <td>Senior Citizen Event Supplies</td>
+                            <td>Social Services</td>
+                            <td>REQ-112</td>
+                            <td class="text-danger fw-bold">- ₱ 12,000.00</td>
+                            <td><span class="badge rounded-pill bg-warning text-dark">Pending</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styling for a modern finance look */
+    .card { border-radius: 12px; }
+    .table thead th { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .border-primary { border-color: #0d6efd !important; }
+    .border-success { border-color: #198754 !important; }
+    .border-danger { border-color: #dc3545 !important; }
+</style>
+{% endblock %}

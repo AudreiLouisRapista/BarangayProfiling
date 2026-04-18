@@ -1,0 +1,159 @@
+{% extends "sidebar.html" %}
+
+{% block content %}
+<div class="container-fluid pt-4">
+    
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="fw-bold">Barangay Admin Dashboard</h2>
+            <p class="text-muted">Hello, Administrator! Here is what's happening in your barangay today.</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <div id="current-date" class="badge bg-light text-dark border p-2">
+                <i class="bi bi-calendar3 me-2"></i> April 19, 2026
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex align-items-center">
+                    <div class="icon-box bg-primary-subtle text-primary rounded p-3 me-3">
+                        <i class="bi bi-people-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-0 small uppercase">Employees</h6>
+                        <h3 class="fw-bold mb-0">24</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex align-items-center">
+                    <div class="icon-box bg-success-subtle text-success rounded p-3 me-3">
+                        <i class="bi bi-cash-stack fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-0 small uppercase">Budget</h6>
+                        <h3 class="fw-bold mb-0">₱ 450k</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex align-items-center">
+                    <div class="icon-box bg-warning-subtle text-warning rounded p-3 me-3">
+                        <i class="bi bi-file-earmark-text fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-0 small uppercase">Pending Certs</h6>
+                        <h3 class="fw-bold mb-0">12</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex align-items-center">
+                    <div class="icon-box bg-info-subtle text-info rounded p-3 me-3">
+                        <i class="bi bi-megaphone-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-0 small uppercase">Announcements</h6>
+                        <h3 class="fw-bold mb-0">3</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="fw-bold mb-0">Administrative Quick Tasks</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a href="/employees" class="btn btn-outline-primary w-100 p-4 text-start">
+                                <i class="bi bi-person-plus fs-2 mb-2 d-block"></i>
+                                <strong>Register New Employee</strong>
+                                <p class="small mb-0 text-muted">Add staff to the system database.</p>
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="/certificates" class="btn btn-outline-danger w-100 p-4 text-start">
+                                <i class="bi bi-printer fs-2 mb-2 d-block"></i>
+                                <strong>Issue Certificate</strong>
+                                <p class="small mb-0 text-muted">Print employment or clearance forms.</p>
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="/finances" class="btn btn-outline-success w-100 p-4 text-start">
+                                <i class="bi bi-wallet2 fs-2 mb-2 d-block"></i>
+                                <strong>Financial Entry</strong>
+                                <p class="small mb-0 text-muted">Record new revenue or expenses.</p>
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="#" class="btn btn-outline-secondary w-100 p-4 text-start">
+                                <i class="bi bi-gear fs-2 mb-2 d-block"></i>
+                                <strong>System Settings</strong>
+                                <p class="small mb-0 text-muted">Configure backups and accounts.</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="fw-bold mb-0">Recent System Logs</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush small">
+                        <li class="list-group-item border-0 ps-0">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            <strong>Admin</strong> generated COE for Ricardo Cruz.
+                            <br><small class="text-muted">2 hours ago</small>
+                        </li>
+                        <li class="list-group-item border-0 ps-0">
+                            <i class="bi bi-plus-circle-fill text-primary me-2"></i>
+                            <strong>Admin</strong> added new employee: Juan Reyes.
+                            <br><small class="text-muted">5 hours ago</small>
+                        </li>
+                        <li class="list-group-item border-0 ps-0">
+                            <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+                            Budget alert: Utilities reached 80%.
+                            <br><small class="text-muted">Yesterday</small>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-white border-0 text-center">
+                    <a href="#" class="small text-decoration-none">View All Logs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-primary-subtle { background-color: #cfe2ff; }
+    .bg-success-subtle { background-color: #d1e7dd; }
+    .bg-warning-subtle { background-color: #fff3cd; }
+    .bg-info-subtle { background-color: #cff4fc; }
+    
+    .btn-outline-primary:hover, .btn-outline-success:hover, .btn-outline-danger:hover, .btn-outline-secondary:hover {
+        color: white !important;
+    }
+    
+    .card { border-radius: 15px; transition: 0.3s ease; }
+    .card:hover { transform: translateY(-3px); }
+</style>
+{% endblock %}

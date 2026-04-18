@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        /* Height 100vh and flex-column are key for the bottom-pinning logic */
+        .sidebar { 
+            height: 100vh; 
+            width: 250px; 
+            position: fixed; 
+            background: #212529; 
+            color: white; 
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .main-content { margin-left: 260px; padding: 20px; }
+        
+        .nav-link { 
+            color: #adb5bd; /* Slightly muted color for non-active links */
+            padding: 10px 15px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: block;
+            text-decoration: none;
+        }
+        
+        .nav-link:hover { 
+            background: #343a40; 
+            color: white;
+            padding-left: 20px; /* Subtle slide effect on hover */
+        }
+
+        .nav-link i { margin-right: 10px; }
+
+        .admin-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6c757d;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .active-link {
+            background: #0d6efd !important; /* Bootstrap Blue */
+            color: white !important;
+            font-weight: bold;
+            padding-left: 20px;
+        }
+
+        .active-link i {
+            color: white !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3 class="mb-0"> <a href="/dashboard"><i class="bi bi-house-door-fill me-2"></i></a>Brgy System</h3>
+        
+        <hr class="text-secondary">
+       ROLE or employee name
+        <hr class="text-secondary">
+
+        
+        <p class="admin-label">Main Navigation</p>
+        
+    <nav class="nav flex-column">
+        <a href="/dashboard" class="nav-link {% if segment == 'dashboard' %}active-link{% endif %}">
+            <i class="bi bi-border-all"></i> Dashboard
+        </a>
+
+        <a href="/employees" class="nav-link {% if segment == 'employees' %}active-link{% endif %}">
+            <i class="bi bi-people"></i> Employees
+        </a>
+
+        <a href="/certificates" class="nav-link {% if segment == 'certificates' %}active-link{% endif %}">
+            <i class="bi bi-file-earmark-text"></i> Certificates
+        </a>
+
+        <a href="/finances" class="nav-link {% if segment == 'finances' %}active-link{% endif %}">
+            <i class="bi bi-bank"></i> Finances
+        </a>
+    </nav>
+
+        <div class="mt-auto">
+            <hr class="text-secondary">
+            <a href="/" class="nav-link text-danger">
+                <i class="bi bi-box-arrow-in-left"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
