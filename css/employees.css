@@ -1,0 +1,4 @@
+.bg-success-subtle { background-color: #d1e7dd; }
+.bg-warning-subtle { background-color: #fff3cd; }
+.shadow-sm { box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); }
+.table-striped>tbody>tr:nth-of-type(odd)>* { --bs-table-accent-bg: rgba(0, 0, 0, 0.02); }
