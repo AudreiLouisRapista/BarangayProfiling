@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
@@ -18,13 +20,28 @@ class Employee(db.Model):
     id             = db.Column(db.Integer, primary_key=True)
     first_name     = db.Column(db.String(100), nullable=False)
     last_name      = db.Column(db.String(100), nullable=False)
-    position_id       = db.Column(db.Integer, db.ForeignKey('position.id'), nullable=False)
-    employee_email = db.Column(db.String(100), unique=True)   
-    password       = db.Column(db.String(100))                
-    created_at     = db.Column(db.DateTime, default=db.func.current_timestamp())  
-    updated_at     = db.Column(db.DateTime, onupdate=db.func.current_timestamp()) 
+    position_id    = db.Column(db.Integer, db.ForeignKey('position.id'), nullable=False)
+    status_id      = db.Column(db.Integer, db.ForeignKey('status.id'), nullable=False)
+    employee_email = db.Column(db.String(100), unique=True)
+    phone_number   = db.Column(db.String(20))   
+    password       = db.Column(db.String(255)) # Increased to 255 for secure hashes                
+    created_at     = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  
+    updated_at     = db.Column(db.DateTime, onupdate=lambda: datetime.now(timezone.utc))
+    deleted_at     = db.Column(db.DateTime, nullable=True) 
 
-    position     = db.relationship('Position', backref='employees')
+    # Relationships
+    position = db.relationship('Position', backref='employees')
+    status   = db.relationship('Status', backref='employees')
+
+    def soft_delete(self):
+        """Mark the employee as deleted without removing from DB."""
+        self.deleted_at = datetime.now(timezone.utc)
+        db.session.commit()
+
+    def restore(self):
+        """Bring a soft-deleted employee back to active status."""
+        self.deleted_at = None
+        db.session.commit()
 
 class Admin(db.Model):
     __tablename__ = 'admin'
@@ -37,11 +54,16 @@ class Position(db.Model):
     id             = db.Column(db.Integer, primary_key=True)
     position_type   = db.Column(db.String(100), unique=True, nullable=False)
 
+
+class Status(db.Model):
+    __tablename__ = 'status'
+    id             = db.Column(db.Integer, primary_key=True)
+    status   = db.Column(db.String(100), unique=True, nullable=False)
 # ── login Routes ──────────────────────────────────────────────────────
 @app.route('/')
 def login_page():
     if 'admin_id' in session:
-        return redirect(url_for('BarangayAdmin/dashboard'))
+        return redirect(url_for('dashboard'))
     return render_template('login.html')
 
 
@@ -103,7 +125,7 @@ def login_required(f):
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    total_employees = Employee.query.count()
+    total_employees = Employee.query.filter(Employee.deleted_at == None).count()
     return render_template('BarangayAdmin/dashboard.html', segment='dashboard', total_employees=total_employees)
 
 
@@ -113,32 +135,40 @@ def dashboard():
 @app.route('/employees')
 @login_required
 def employees():
-    all_employees = Employee.query.all()
+    active_employees = Employee.query.filter(Employee.deleted_at == None).all()
     all_positions = Position.query.all()
-    total_employees = Employee.query.count()
-    return render_template('BarangayAdmin/employees.html', segment='employees', employees=all_employees, positions=all_positions, total_employees=total_employees)
+    all_statuses = Status.query.all()
+    total_employees = Employee.query.filter(Employee.deleted_at == None).count()
+    return render_template('BarangayAdmin/employees.html', segment='employees', employees=active_employees, positions=all_positions, statuses=all_statuses, total_employees=total_employees, edit_employee=None, active_employees=active_employees )
 
-#Employees route to add new employee
+#All employee management routes (add, update, edit) will be here
 @app.route('/add_employee', methods=['POST'])
+@login_required
 def add_employee():
     try: 
         first_name = request.form['first_name']
         last_name = request.form['last_name']
         position_id = request.form['position_id']
+        status_id = request.form['status_id']
         employee_email = request.form['employee_email']
+        phone_number = request.form['phone_number']
         password = request.form['password']
 
-        existing = Employee.query.filter_by(employee_email=employee_email).first()
+        existing = Employee.query.filter_by(employee_email=employee_email).filter(Employee.deleted_at == None).first()
         if existing:
             flash('Employee with this email already exists.', 'warning')
-            return redirect(url_for('BarangayAdmin/employees'))
+            return redirect(url_for('employees'))
 
         new_employee = Employee(
             first_name=first_name,
             last_name=last_name,
             position_id=position_id,
+            status_id=status_id,
             employee_email=employee_email,
-            password=password
+            phone_number=phone_number,
+            password=password,
+            updated_at=datetime.now(timezone.utc),
+           
         )
         db.session.add(new_employee)
         db.session.commit()
@@ -150,7 +180,113 @@ def add_employee():
 
     return redirect(url_for('employees'))
 
+@app.route('/update_employee', methods=['POST'])
+@login_required
+def update_employee():
+    try:
+        employee_id    = request.form.get('employee_id')   
+        employee       = Employee.query.get(employee_id)   
 
+        if not employee:
+            flash('Employee not found.', 'danger')
+            return redirect(url_for('employees'))
+
+        new_email = request.form.get('employee_email')
+
+    
+        existing = Employee.query.filter(
+            Employee.employee_email == new_email,
+            Employee.id != employee_id             
+        ).first()
+
+        if existing:
+            flash('Email already used by another employee.', 'warning')
+            return redirect(url_for('employees'))
+
+       
+        employee.first_name     = request.form.get('first_name')
+        employee.last_name      = request.form.get('last_name')
+        employee.position_id    = request.form.get('position_id')
+        employee.status_id      = request.form.get('status_id')
+        employee.employee_email = new_email
+        employee.phone_number   = request.form.get('phone_number')
+        employee.updated_at     = datetime.now(timezone.utc)
+
+     
+        new_password = request.form.get('password')
+        if new_password:
+            employee.password = generate_password_hash(new_password)
+        
+        db.session.commit()   
+        flash('Employee updated successfully!', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating employee: {str(e)}', 'danger')
+
+    return redirect(url_for('employees'))
+
+@app.route('/edit_employee/<int:id>')
+@login_required
+def edit_employee(id):
+    employee = Employee.query.filter_by(id=id, deleted_at=None).first()
+    if not employee:
+        flash('Employee not found.', 'danger')
+        return redirect(url_for('employees'))
+    all_positions = Position.query.all()
+    all_employees = Employee.query.filter(Employee.deleted_at == None).all()
+    all_statuses  = Status.query.all()
+    total_employees = Employee.query.filter(Employee.deleted_at == None).count()
+    return render_template('BarangayAdmin/employees.html',
+                           segment='employees',
+                           employees=all_employees,
+                           positions=all_positions,
+                           total_employees=total_employees,
+                            statuses=all_statuses,
+                           edit_employee=employee)  
+
+@app.route('/delete_employee/<int:id>', methods=['POST'])
+@login_required
+def delete_employee(id):
+    employee = Employee.query.get_or_404(id)
+    try:
+        employee.soft_delete()
+        flash(f'Employee {employee.first_name} has been moved to archives.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        print(f"DELETE ERROR: {str(e)}")  # Print to terminal
+        flash(f'Error during deletion: {str(e)}', 'danger')  # Show actual error
+    return redirect(url_for('employees'))
+
+@app.route('/employees_archive')
+@login_required
+def employees_archive():
+    """View soft-deleted (archived) employees"""
+    archived_employees = Employee.query.filter(Employee.deleted_at != None).all()
+    all_positions = Position.query.all()
+    all_statuses = Status.query.all()
+    total_archived = Employee.query.filter(Employee.deleted_at != None).count()
+    return render_template('BarangayAdmin/employees.html', 
+                           segment='employees_archive',
+                           employees=archived_employees,
+                           positions=all_positions,
+                           statuses=all_statuses,
+                           total_employees=total_archived,
+                           edit_employee=None,
+                           is_archive=True)
+
+@app.route('/restore_employee/<int:id>', methods=['POST'])
+@login_required
+def restore_employee(id):
+    """Restore a soft-deleted employee"""
+    employee = Employee.query.get_or_404(id)
+    try:
+        employee.restore()  # Uses the restore() method from your model
+        flash(f'Employee {employee.first_name} has been restored.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error restoring employee: {str(e)}', 'danger')
+    return redirect(url_for('employees_archive'))
 
 
 @app.route('/finances')
@@ -168,7 +304,7 @@ def certificates():
 
 
 # ── Protect All Systems Routes (OFFICIALS) ───────────────────────────────────────────
-
+ 
 
 
 # ── Init DB ─────────────────────────────────────────────────────
