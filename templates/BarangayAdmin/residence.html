@@ -1,0 +1,700 @@
+{% extends "BarangayAdmin/sidebar.html" %}
+
+{% block content %}
+<div class="container-fluid pt-4">
+    
+    <div class="row align-items-center mb-4">
+        <div class="col-md-6">
+            {% if is_archive %}
+                <h2 class="fw-bold"><i class="bi bi-archive me-2 text-warning"></i>Residence Archives</h2>
+                <p class="text-muted">View and restore archived (deleted) residences.</p>
+            {% else %}
+                <h2 class="fw-bold"><i class="bi bi-house-fill me-2 text-success"></i>Residence Management</h2>
+                <p class="text-muted">View, search, and manage all barangay residents.</p>
+            {% endif %}
+        </div>
+        <div class="col-md-6 text-md-end">
+            <div class="d-grid d-md-flex gap-2 justify-content-md-end">
+                {% if not is_archive %}
+                    <a href="{{ url_for('residences_archive') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-archive me-1"></i> View Archives
+                    </a>
+                    <button class="btn btn-outline-secondary btn-sm" type="button">
+                        <i class="bi bi-download me-1"></i> Export List
+                    </button>
+                    <button class="btn btn-success btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addResidenceModal">
+                        <i class="bi bi-person-plus-fill me-1"></i> Add New Residence
+                    </button>
+                {% else %}
+                    <a href="{{ url_for('residence') }}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Active
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show position-relative overflow-hidden" role="alert">
+                    <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }}-fill me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="progress position-absolute bottom-0 start-0 w-100" style="height: 3px; background:transparent;">
+                        <div class="progress-bar bg-{{ category }} alert-timer-bar" style="width: 100%;"></div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Search & Filter -->
+    <div class="card mb-4 border-0 shadow-sm bg-white">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" id="residenceSearch" class="form-control border-start-0" 
+                               placeholder="Search by name, purok, or ID...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select text-muted" id="civilStatusFilter">
+                        <option selected>Filter by Civil Status</option>
+                        <option value="Single">Single</option>
+                        <option value="Married">Married</option>
+                        <option value="Widowed">Widowed</option>
+                        <option value="Separated">Separated</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select text-muted" id="statusFilter">
+                        <option selected>Filter by Status</option>
+                        {% for status in statuses %}
+                            <option value="{{ status.id }}">{{ status.status }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                 <div class="col-md-3">
+                    <select class="form-select text-muted" id="statusFilter">
+                        <option selected>Filter by Purok</option>
+                        {% for address in puroks %}
+                            <option value="{{ address.id }}">{{ address.purok_number }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card border-0 shadow-sm bg-white">
+        <div class="card-header bg-white border-bottom-0 pt-3">
+            <h5 class="card-title text-muted mb-0">
+                Total Records: <span class="fw-bold text-dark">{{ residences|length }}</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped table-bordered mb-0" style="vertical-align: middle;">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Resident ID</th>
+                            <th>Full Name</th>
+                            <th>Purok</th>
+                            <th>Civil Status</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            {% if is_archive %}
+                                <th>Deleted Date</th>
+                            {% endif %}
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="residenceTable">
+                        {% for res in residence %}
+                        <tr>
+                            <td class="fw-bold ps-3">RS-{{ res.id }}</td>
+                            <td>{{ res.residence_firstname }} {{ res.residence_middlename }} {{ res.residence_lastname }} {{ res.residence_suffix or '' }}</td>
+                            <td>Purok {{ res.address.purok_number if res.address else 'N/A' }}</td>
+                            <td>{{ res.residence_civilStatus or 'N/A' }}</td>
+                            <td>{{ res.residence_phoneNumber or 'N/A' }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if res.status.status == 'Active' else 'secondary' }}">
+                                    {{ res.status.status }}
+                                </span>
+                            </td>
+                            {% if is_archive %}
+                                <td>{{ res.deleted_at.strftime('%Y-%m-%d %H:%M') if res.deleted_at else 'N/A' }}</td>
+                            {% endif %}
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary shadow-sm"
+                                            data-bs-toggle="tooltip" data-bs-placement="top" title="View Profile"
+                                            {% if is_archive %}style="display:none;"{% endif %}>
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+
+                                   <button type="button" class="btn btn-sm btn-outline-warning shadow-sm"
+                                            data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Resident"
+                                            onclick="window.location.href='/edit_residence/{{ res.id }}'"
+                                            {% if is_archive %}style="display:none;"{% endif %}>
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    {% if not is_archive %}
+                                        <form action="{{ url_for('delete_residence', id=res.id) }}" method="POST" style="display:inline;">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger shadow-sm"
+                                                    onclick="return confirm('Archive this record?')"
+                                                    data-bs-toggle="tooltip" title="Archive Record">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form action="{{ url_for('restore_residence', id=res.id) }}" method="POST" style="display:inline;">
+                                            <button type="submit" class="btn btn-sm btn-outline-success shadow-sm"
+                                                    onclick="return confirm('Restore this resident?')"
+                                                    data-bs-toggle="tooltip" title="Restore Record">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                No residents found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white border-top-0 d-flex justify-content-between align-items-center">
+            <p class="text-muted mb-0 small">Showing {{ residences|length }} entries</p>
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item disabled"><a class="page-link" href="#">Next</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+
+<!-- ── Add Residence Modal ───────────────────────────────────────── -->
+<div class="modal fade" id="addResidenceModal" tabindex="-1" aria-labelledby="addResidenceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+
+            <div class="modal-header text-white border-bottom-0" 
+                 style="background: linear-gradient(45deg, #198754, #20c997); border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title fw-bold" id="addResidenceModalLabel">
+                    <i class="bi bi-house-add-fill me-2"></i>Register New Resident
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form action="/add_residence" method="POST">
+                <div class="modal-body p-4 bg-white">
+
+                    <!-- Personal Info -->
+                    <h6 class="fw-bold text-success mb-3 border-bottom pb-2">
+                        <i class="bi bi-person-fill me-1"></i> Personal Information
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">FIRST NAME <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="first_name" placeholder="First name" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">MIDDLE NAME</label>
+                            <input type="text" class="form-control" name="middle_name" placeholder="Middle name">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">LAST NAME <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="last_name" placeholder="Last name" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">SUFFIX</label>
+                            <select class="form-select" name="suffix">
+                                <option value="">None</option>
+                                <option value="Jr.">Jr.</option>
+                                <option value="Sr.">Sr.</option>
+                                <option value="II">II</option>
+                                <option value="III">III</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">BIRTHDAY <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="birthday" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">CIVIL STATUS <span class="text-danger">*</span></label>
+                            <select class="form-select" name="civil_status" required>
+                                <option value="" disabled selected>Select...</option>
+                                <option value="Single">Single</option>
+                                <option value="Married">Married</option>
+                                <option value="Widowed">Widowed</option>
+                                <option value="Separated">Separated</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">CITIZENSHIP <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="citizenship" placeholder="e.g. Filipino" value="Filipino" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">PHONE NUMBER</label>
+                            <input type="tel" class="form-control" name="phone_number" placeholder="09XXXXXXXXX" maxlength="11"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);">
+                        </div>
+                    </div>
+
+                    <!-- Address Info -->
+                    <h6 class="fw-bold text-success mb-3 border-bottom pb-2">
+                        <i class="bi bi-geo-alt-fill me-1"></i> Address Information
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">PUROK NUMBER</label>
+                            <input type="number" class="form-control" name="purok_number" placeholder="e.g. 1">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-secondary small">STREET NAME</label>
+                            <input type="text" class="form-control" name="street_name" placeholder="Street name">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold text-secondary small">HOUSE NO.</label>
+                            <input type="number" class="form-control" name="house_number" placeholder="e.g. 12">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">HEAD OF FAMILY</label>
+                            <select class="form-select" name="is_head_of_family">
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Health Info -->
+                    <h6 class="fw-bold text-success mb-3 border-bottom pb-2">
+                        <i class="bi bi-heart-pulse-fill me-1"></i> Health Information
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">BLOOD TYPE</label>
+                            <select class="form-select" name="blood_type">
+                                <option value="">Unknown</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">PWD?</label>
+                            <select class="form-select" name="is_pwd">
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">DISABILITY TYPE</label>
+                            <input type="text" class="form-control" name="disability_type" placeholder="If applicable">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">SENIOR CITIZEN?</label>
+                            <select class="form-select" name="is_senior_citizen">
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Demographic Info -->
+                    <h6 class="fw-bold text-success mb-3 border-bottom pb-2">
+                        <i class="bi bi-bar-chart-fill me-1"></i> Demographic Information
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">EDUCATIONAL ATTAINMENT</label>
+                            <select class="form-select" name="educational_attaiment">
+                                <option value="">Select...</option>
+                                <option value="No Formal Education">No Formal Education</option>
+                                <option value="Elementary">Elementary</option>
+                                <option value="High School">High School</option>
+                                <option value="Senior High School">Senior High School</option>
+                                <option value="Vocational">Vocational</option>
+                                <option value="College">College</option>
+                                <option value="Post Graduate">Post Graduate</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">OCCUPATION</label>
+                            <input type="text" class="form-control" name="occupation" placeholder="e.g. Farmer">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">MONTHLY INCOME</label>
+                            <input type="number" class="form-control" name="monthly_income" placeholder="0.00" step="0.01">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">REGISTERED VOTER?</label>
+                            <select class="form-select" name="is_voter">
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Account Credentials -->
+                    <h6 class="fw-bold text-success mb-3 border-bottom pb-2">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Account Credentials
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-secondary small">EMAIL ADDRESS <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" name="email" placeholder="name@example.com" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-secondary small">PASSWORD <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" name="password" id="add_password" placeholder="Create password" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePass('add_password', 'add_eye')">
+                                    <i class="bi bi-eye" id="add_eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-secondary small">CONFIRM PASSWORD <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" name="confirm_password" id="add_confirm_password" placeholder="Confirm password" required>
+                            <div id="addPasswordMismatch" class="text-danger mt-1 d-none" style="font-size: 0.75rem;">
+                                <i class="bi bi-exclamation-circle"></i> Passwords do not match.
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="status_id" value="1">
+
+                </div>
+
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light text-muted fw-semibold" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm" id="addSubmitBtn">
+                        <i class="bi bi-check2-circle me-1"></i> Register Resident
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- ── Edit Residence Modal ───────────────────────────────────────── -->
+{% if edit_residence is defined and edit_residence %}
+<div class="modal fade show d-block" id="updateResidenceModal" tabindex="-1" aria-modal="true" role="dialog" style="background: rgba(0,0,0,0.5);">
+{% else %}
+<div class="modal fade" id="updateResidenceModal" tabindex="-1" aria-hidden="true">
+{% endif %}
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+
+            <div class="modal-header text-dark border-bottom-0"
+                 style="background: linear-gradient(45deg, #ffca2c, #ffdb70); border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Resident Information
+                </h5>
+               <button type="button" class="btn-close btn-close-white" 
+                 onclick="window.location.href='/residence'"></button>
+            </div>
+
+            <form action="/update_residence" method="POST">
+                <div class="modal-body p-4 bg-white">
+
+                    <div class="alert alert-warning border-0 py-2 mb-4 small">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Updating records for: <strong>{{ edit_residence.residence_firstname }} {{ edit_residence.residence_lastname }}</strong>
+                    </div>
+
+                    <input type="hidden" name="residence_id" value="{{ edit_residence.id if edit_residence }}">
+
+                    <!-- Personal Info -->
+                    <h6 class="fw-bold text-warning mb-3 border-bottom pb-2">
+                        <i class="bi bi-person-fill me-1"></i> Personal Information
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">FIRST NAME <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="first_name" 
+                                   value="{{ edit_residence.residence_firstname if edit_residence }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">MIDDLE NAME</label>
+                            <input type="text" class="form-control" name="middle_name" 
+                                   value="{{ edit_residence.residence_middlename if edit_residence }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">LAST NAME <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="last_name" 
+                                   value="{{ edit_residence.residence_lastname if edit_residence }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">SUFFIX</label>
+                            <select class="form-select" name="suffix">
+                                <option value="">None</option>
+                                <option value="Jr." {% if edit_residence and edit_residence.residence_suffix == 'Jr.' %}selected{% endif %}>Jr.</option>
+                                <option value="Sr." {% if edit_residence and edit_residence.residence_suffix == 'Sr.' %}selected{% endif %}>Sr.</option>
+                                <option value="II" {% if edit_residence and edit_residence.residence_suffix == 'II' %}selected{% endif %}>II</option>
+                                <option value="III" {% if edit_residence and edit_residence.residence_suffix == 'III' %}selected{% endif %}>III</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">BIRTHDAY</label>
+                            <input type="date" class="form-control" name="birthday" 
+                                   value="{{ edit_residence.residence_birthday if edit_residence }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">CIVIL STATUS</label>
+                            <select class="form-select" name="civil_status">
+                                {% for cs in ['Single', 'Married', 'Widowed', 'Separated'] %}
+                                    <option value="{{ cs }}" {% if edit_residence and edit_residence.residence_civilStatus == cs %}selected{% endif %}>{{ cs }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">CITIZENSHIP</label>
+                            <input type="text" class="form-control" name="citizenship" 
+                                   value="{{ edit_residence.residence_citizenship if edit_residence }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">PHONE NUMBER</label>
+                            <input type="tel" class="form-control" name="phone_number" maxlength="11"
+                                   value="{{ edit_residence.residence_phoneNumber if edit_residence }}"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);">
+                        </div>
+                    </div>
+
+                    <!-- Address -->
+                    <h6 class="fw-bold text-warning mb-3 border-bottom pb-2">
+                        <i class="bi bi-geo-alt-fill me-1"></i> Address Information
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">PUROK NUMBER</label>
+                            <input type="number" class="form-control" name="purok_number"
+                                   value="{{ edit_residence.address.purok_number if edit_residence and edit_residence.address }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-secondary small">STREET NAME</label>
+                            <input type="text" class="form-control" name="street_name"
+                                   value="{{ edit_residence.address.street_name if edit_residence and edit_residence.address }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold text-secondary small">HOUSE NO.</label>
+                            <input type="number" class="form-control" name="house_number"
+                                   value="{{ edit_residence.address.house_number if edit_residence and edit_residence.address }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">HEAD OF FAMILY</label>
+                            <select class="form-select" name="is_head_of_family">
+                                <option value="Yes" {% if edit_residence and edit_residence.address and edit_residence.address.is_head_of_family == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No" {% if edit_residence and edit_residence.address and edit_residence.address.is_head_of_family == 'No' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Health -->
+                    <h6 class="fw-bold text-warning mb-3 border-bottom pb-2">
+                        <i class="bi bi-heart-pulse-fill me-1"></i> Health Information
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">BLOOD TYPE</label>
+                            <select class="form-select" name="blood_type">
+                                {% for bt in ['', 'A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'] %}
+                                    <option value="{{ bt }}" {% if edit_residence and edit_residence.health and edit_residence.health.blood_type == bt %}selected{% endif %}>
+                                        {{ bt if bt else 'Unknown' }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">PWD?</label>
+                            <select class="form-select" name="is_pwd">
+                                <option value="0" {% if edit_residence and edit_residence.health and edit_residence.health.is_pwd == 0 %}selected{% endif %}>No</option>
+                                <option value="1" {% if edit_residence and edit_residence.health and edit_residence.health.is_pwd == 1 %}selected{% endif %}>Yes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">DISABILITY TYPE</label>
+                            <input type="text" class="form-control" name="disability_type"
+                                   value="{{ edit_residence.health.disability_type if edit_residence and edit_residence.health }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">SENIOR CITIZEN?</label>
+                            <select class="form-select" name="is_senior_citizen">
+                                <option value="0" {% if edit_residence and edit_residence.health and edit_residence.health.is_senior_citizen == 0 %}selected{% endif %}>No</option>
+                                <option value="1" {% if edit_residence and edit_residence.health and edit_residence.health.is_senior_citizen == 1 %}selected{% endif %}>Yes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Demographic -->
+                    <h6 class="fw-bold text-warning mb-3 border-bottom pb-2">
+                        <i class="bi bi-bar-chart-fill me-1"></i> Demographic Information
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">EDUCATIONAL ATTAINMENT</label>
+                            <select class="form-select" name="educational_attaiment">
+                                {% for edu in ['No Formal Education', 'Elementary', 'High School', 'Senior High School', 'Vocational', 'College', 'Post Graduate'] %}
+                                    <option value="{{ edu }}" {% if edit_residence and edit_residence.demographic and edit_residence.demographic.educational_attaiment == edu %}selected{% endif %}>{{ edu }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">OCCUPATION</label>
+                            <input type="text" class="form-control" name="occupation"
+                                   value="{{ edit_residence.demographic.occupation if edit_residence and edit_residence.demographic }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">MONTHLY INCOME</label>
+                            <input type="number" class="form-control" name="monthly_income" step="0.01"
+                                   value="{{ edit_residence.demographic.monthly_income if edit_residence and edit_residence.demographic }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">REGISTERED VOTER?</label>
+                            <select class="form-select" name="is_voter">
+                                <option value="0" {% if edit_residence and edit_residence.demographic and edit_residence.demographic.is_voter == 0 %}selected{% endif %}>No</option>
+                                <option value="1" {% if edit_residence and edit_residence.demographic and edit_residence.demographic.is_voter == 1 %}selected{% endif %}>Yes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Account -->
+                    <h6 class="fw-bold text-warning mb-3 border-bottom pb-2">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Account Credentials
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary small">EMAIL ADDRESS</label>
+                            <input type="email" class="form-control" name="email"
+                                   value="{{ edit_residence.user.user_email if edit_residence and edit_residence.user }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">NEW PASSWORD</label>
+                            <input type="password" class="form-control" name="password" placeholder="Leave blank to keep current">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">CONFIRM PASSWORD</label>
+                            <input type="password" class="form-control" name="confirm_password" placeholder="Confirm new password">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-secondary small">STATUS</label>
+                            <select class="form-select" name="status_id">
+                                {% for status in statuses %}
+                                    <option value="{{ status.id }}" {% if edit_residence and status.id == edit_residence.status_id %}selected{% endif %}>
+                                        {{ status.status }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer border-0 p-4 pt-0">
+                   <button type="button" class="btn btn-light text-muted fw-semibold" 
+                    onclick="window.location.href='/residence'">Discard</button>
+
+                    <button type="submit" class="btn btn-warning px-4 fw-bold shadow-sm">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Update Record
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toggle password visibility
+    function togglePass(inputId, iconId) {
+        const input = document.getElementById(inputId);
+        const icon  = document.getElementById(iconId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.replace('bi-eye', 'bi-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.replace('bi-eye-slash', 'bi-eye');
+        }
+    }
+
+    // Password match validation - Add modal
+    document.getElementById('add_confirm_password').addEventListener('input', function() {
+        const pass    = document.getElementById('add_password').value;
+        const confirm = this.value;
+        const msg     = document.getElementById('addPasswordMismatch');
+        const btn     = document.getElementById('addSubmitBtn');
+        if (confirm && pass !== confirm) {
+            msg.classList.remove('d-none');
+            btn.disabled = true;
+        } else {
+            msg.classList.add('d-none');
+            btn.disabled = false;
+        }
+    });
+
+    // Search filter
+    document.getElementById('residenceSearch').addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        document.querySelectorAll('#residenceTable tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+        });
+    });
+
+    // Auto close flash messages
+    const DURATION = 5000;
+    document.querySelectorAll('.alert').forEach(function(alert) {
+        const bar = alert.querySelector('.alert-timer-bar');
+        if (bar) {
+            bar.style.transition = `width ${DURATION}ms linear`;
+            setTimeout(() => bar.style.width = '0%', 50);
+        }
+        setTimeout(function() {
+            alert.classList.remove('show');
+            setTimeout(function() { alert.remove(); }, 500);
+        }, DURATION);
+    });
+
+    // Tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+</script>
+{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/residence.css') }}">
+{% endblock %}

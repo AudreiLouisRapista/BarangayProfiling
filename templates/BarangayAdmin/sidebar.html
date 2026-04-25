@@ -28,7 +28,12 @@
         .admin-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #6c757d; margin-top: 15px; margin-bottom: 5px; font-weight: bold; }
         .active-link { background: #0d6efd !important; color: white !important; font-weight: bold; padding-left: 20px; }
     </style>
-
+    <script
+    src="https://www.tuqlas.com/chatbot.js"
+    data-key="tq_live_2deb0b7ed903ce29e6ed3dc52462155e5213d9f6"
+    data-api="https://www.tuqlas.com"
+    defer
+    ></script>
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -54,6 +59,10 @@
 
             <a href="/employees" class="nav-link {% if segment == 'employees' %}active-link{% endif %}">
                 <i class="bi bi-people"></i> Employees
+            </a>
+
+               <a href="/residence" class="nav-link {% if segment == 'residence' %}active-link{% endif %}">
+                <i class="bi bi-person-plus-fill"></i> Residence
             </a>
 
             <a href="/certificates" class="nav-link {% if segment == 'certificates' %}active-link{% endif %}">

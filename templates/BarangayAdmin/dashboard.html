@@ -18,14 +18,18 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                <div class="alert alert-{{ category }} alert-dismissible fade show position-relative overflow-hidden" role="alert">
                     <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }}-fill me-2"></i>
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="progress position-absolute bottom-0 start-0 w-100" style="height: 3px; background:transparent;">
+                        <div class="progress-bar bg-{{ category }} alert-timer-bar" style="width: 100%;"></div>
+                    </div>
                 </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
+
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card border-0 shadow-sm p-3">
@@ -167,4 +171,20 @@
     .card { border-radius: 15px; transition: 0.3s ease; }
     .card:hover { transform: translateY(-3px); }
 </style>
+
+<script>
+   // Auto close flash messages
+    const DURATION = 5000;
+    document.querySelectorAll('.alert').forEach(function(alert) {
+        const bar = alert.querySelector('.alert-timer-bar');
+        if (bar) {
+            bar.style.transition = `width ${DURATION}ms linear`;
+            setTimeout(() => bar.style.width = '0%', 50);
+        }
+        setTimeout(function() {
+            alert.classList.remove('show');
+            setTimeout(function() { alert.remove(); }, 500);
+        }, DURATION);
+    });
+</script>
 {% endblock %}

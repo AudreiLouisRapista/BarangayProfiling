@@ -35,14 +35,17 @@
         </div>
     </div>
 
-    <!-- Flash Messages -->
+     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                <div class="alert alert-{{ category }} alert-dismissible fade show position-relative overflow-hidden" role="alert">
                     <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }}-fill me-2"></i>
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="progress position-absolute bottom-0 start-0 w-100" style="height: 3px; background:transparent;">
+                        <div class="progress-bar bg-{{ category }} alert-timer-bar" style="width: 100%;"></div>
+                    </div>
                 </div>
             {% endfor %}
         {% endif %}
@@ -95,8 +98,8 @@
                             <th class="ps-3">Employee ID</th>
                             <th>Full Name</th>
                             <th>Position</th>
-                            <th>Email</th>
                             <th>Phone</th>
+                            <th>Term Start</th>
                             <th>Status</th>
                             {% if is_archive %}
                                 <th>Deleted Date</th>
@@ -108,10 +111,10 @@
                         {% for emp in employees %}
                         <tr id="employee-row">
                             <td class="fw-bold ps-3">EM-{{ emp.id }}</td>
-                            <td>{{ emp.first_name }} {{ emp.last_name }}</td>
+                            <td>{{ emp.employee_firstname }} {{ emp.employee_lastname }}</td>
                             <td>{{ emp.position.position_type }}</td>
-                            <td>{{ emp.employee_email }}</td>
-                            <td>{{ emp.phone_number }}</td>
+                            <td>{{ emp.employee_phonenumber }}</td>
+                            <td>{{emp.created_at}}</td>
                             <td>{{ emp.status.status }}</td>
                             {% if is_archive %}
                                 <td>{{ emp.deleted_at.strftime('%Y-%m-%d %H:%M') if emp.deleted_at else 'N/A' }}</td>
@@ -124,12 +127,12 @@
                                         <i class="bi bi-eye"></i>
                                     </button>
 
-                                    <a href="/edit_employee/{{ emp.id }}" class="btn btn-sm btn-outline-warning shadow-sm" 
-                                    data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Staff"
-                                    {% if is_archive %}style="display:none;"{% endif %}>
+                                    <button type="button" class="btn btn-sm btn-outline-warning shadow-sm"
+                                            data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Staff"
+                                            onclick="window.location.href='/edit_employee/{{ emp.id }}'"
+                                            {% if is_archive %}style="display:none;"{% endif %}>
                                         <i class="bi bi-pencil-square"></i>
-                                    </a>
-
+                                    </button>
                                    {% if not is_archive %}
                                         <!-- Show Delete button for active employees -->
                                         <form action="{{ url_for('delete_employee', id=emp.id) }}" method="POST" style="display:inline;">
@@ -154,7 +157,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
+                            <td colspan="{{ 8 if is_archive else 7 }}" class="text-center text-muted py-4">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 No employees found.
                             </td>
@@ -303,7 +306,8 @@
                 <h5 class="modal-title fw-bold" id="updateEmployeeModalLabel">
                     <i class="bi bi-pencil-square me-2"></i>Edit Staff Information
                 </h5>
-               <a href="/employees" class="btn-close"></a>
+               <button type="button" class="btn-close btn-close-white" 
+                 onclick="window.location.href='/employees'"></button>
             </div>
 
             <form action="/update_employee" method="POST">
@@ -311,7 +315,7 @@
                     
                     <div class="alert alert-warning-subtle border-0 py-2 mb-4 small d-flex align-items-center">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        Updating records for: <strong class="ms-1">{{ edit_employee.first_name }} {{ edit_employee.last_name }}</strong>
+                        Updating records for: <strong class="ms-1">{{ edit_employee.employee_firstname }} {{ edit_employee.employee_lastname }}</strong>
                     </div>
 
                     <input type="hidden" name="employee_id" value="{{ edit_employee.id if edit_employee }}">
@@ -322,7 +326,7 @@
                             <div class="input-group custom-input-group">
                                 <span class="input-group-text border-end-0 bg-light"><i class="bi bi-person"></i></span>
                                 <input type="text" class="form-control border-start-0 ps-0" name="first_name" 
-                                       value="{{ edit_employee.first_name if edit_employee }}" required>
+                                       value="{{ edit_employee.employee_firstname if edit_employee }}" required>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -330,7 +334,7 @@
                             <div class="input-group custom-input-group">
                                 <span class="input-group-text border-end-0 bg-light"><i class="bi bi-person"></i></span>
                                 <input type="text" class="form-control border-start-0 ps-0" name="last_name" 
-                                       value="{{ edit_employee.last_name if edit_employee }}" required>
+                                       value="{{ edit_employee.employee_lastname if edit_employee }}" required>
                             </div>
                         </div>
                     </div>
@@ -341,7 +345,7 @@
                             <div class="input-group custom-input-group">
                                 <span class="input-group-text border-end-0 bg-light"><i class="bi bi-phone"></i></span>
                                 <input type="tel" class="form-control border-start-0 ps-0" name="phone_number" 
-                                       value="{{ edit_employee.phone_number if edit_employee }}" maxlength="11" required>
+                                       value="{{ edit_employee.employee_phonenumber if edit_employee }}" maxlength="11" required>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -367,7 +371,7 @@
                             <div class="input-group custom-input-group">
                                 <span class="input-group-text border-end-0 bg-light"><i class="bi bi-envelope"></i></span>
                                 <input type="email" class="form-control border-start-0 ps-0" name="employee_email" 
-                                       value="{{ edit_employee.employee_email if edit_employee }}" required>
+                                       value="{{ edit_employee.user.user_email if edit_employee }}" required>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -401,7 +405,9 @@
                 </div>
 
                 <div class="modal-footer border-0 p-4 pt-0">
-                    <a href="/employees" class="btn btn-light text-muted fw-semibold">Discard</a>
+                    <button type="button" class="btn btn-light text-muted fw-semibold" 
+                     onclick="window.location.href='/employees'">Discard</button>
+                     
                     <button type="submit" class="btn btn-warning px-4 fw-bold shadow-sm">
                         <i class="bi bi-cloud-arrow-up-fill me-1"></i> Update Record
                     </button>

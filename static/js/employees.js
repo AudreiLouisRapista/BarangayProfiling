@@ -68,5 +68,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+ // Auto close flash messages
+    const DURATION = 5000;
+    document.querySelectorAll('.alert').forEach(function(alert) {
+        const bar = alert.querySelector('.alert-timer-bar');
+        if (bar) {
+            bar.style.transition = `width ${DURATION}ms linear`;
+            setTimeout(() => bar.style.width = '0%', 50);
+        }
+        setTimeout(function() {
+            alert.classList.remove('show');
+            setTimeout(function() { alert.remove(); }, 500);
+        }, DURATION);
+    });
+
 // console.log("✅ JavaScript is connected and running!");
 // alert("If you see this, JS is working!");
