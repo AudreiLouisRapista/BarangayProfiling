@@ -135,7 +135,8 @@
                             <td class="text-center">
                                 <div class="d-flex justify-content-center gap-2">
                                     <button type="button" class="btn btn-sm btn-outline-primary shadow-sm"
-                                            data-bs-toggle="tooltip" data-bs-placement="top" title="View Profile"
+                                            data-bs-toggle="tooltip" data-bs-placement="top"  title="View Profile"
+                                             onclick="window.location.href='/view_residence/{{ res.id }}'"
                                             {% if is_archive %}style="display:none;"{% endif %}>
                                         <i class="bi bi-eye"></i>
                                     </button>
@@ -631,7 +632,112 @@
     </div>
 </div>
 
+<!-- ── View Residence Modal ───────────────────────────────────────── -->
+{% if view_residence %}
+<div class="modal fade show d-block" id="viewResidenceModal" tabindex="-1" aria-modal="true" role="dialog" style="background: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
 
+            <div class="modal-header text-dark border-bottom-0"
+                 style="background: linear-gradient(45deg, #2c45ff, #5999e7); border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-eye-fill me-2"></i>Resident Profile Details
+                </h5>
+                <button type="button" class="btn-close" onclick="window.location.href='/residence'"></button>
+            </div>
+
+            <div class="modal-body p-4 bg-white">
+                <div class="alert alert-info border-0 py-2 mb-4 small">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    Displaying records for: <strong>{{ view_residence.residence_firstname }} {{ view_residence.residence_lastname }}</strong>
+                </div>
+
+                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">
+                    <i class="bi bi-person-fill me-1"></i> Personal Information
+                </h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label class="text-secondary small fw-bold">FIRST NAME</label>
+                        <p class="border-bottom pb-1 text-dark">{{ view_residence.residence_firstname }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="text-secondary small fw-bold">MIDDLE NAME</label>
+                        <p class="border-bottom pb-1 text-dark">{{ view_residence.residence_middlename or 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="text-secondary small fw-bold">LAST NAME</label>
+                        <p class="border-bottom pb-1 text-dark">{{ view_residence.residence_lastname }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="text-secondary small fw-bold">SUFFIX</label>
+                        <p class="border-bottom pb-1 text-dark">{{ view_residence.residence_suffix or 'None' }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="text-secondary small fw-bold">BIRTHDAY</label>
+                        <p class="border-bottom pb-1 text-dark">{{ view_residence.residence_birthday }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="text-secondary small fw-bold">CIVIL STATUS</label>
+                        <p class="border-bottom pb-1 text-dark">{{ view_residence.residence_civilStatus }}</p>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">
+                    <i class="bi bi-geo-alt-fill me-1"></i> Address Information
+                </h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label class="text-secondary small fw-bold">PUROK</label>
+                        <p class="border-bottom pb-1 text-dark">{{ view_residence.address.purok_number if view_residence.address else 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-secondary small fw-bold">STREET</label>
+                        <p class="border-bottom pb-1 text-dark">{{ view_residence.address.street_name if view_residence.address else 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="text-secondary small fw-bold">HEAD OF FAMILY</label>
+                        <p class="border-bottom pb-1 text-dark">{{ view_residence.address.is_head_of_family if view_residence.address else 'N/A' }}</p>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">
+                    <i class="bi bi-shield-lock-fill me-1"></i> Account & Demographics
+                </h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="text-secondary small fw-bold">VOTER STATUS</label>
+                        <p class="border-bottom pb-1 text-dark">
+                            {{ 'Registered Voter' if view_residence.demographic.is_voter == 1 else 'Not Registered' }}
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-secondary small fw-bold">EMAIL</label>
+                        <p class="border-bottom pb-1 text-dark">{{ view_residence.user.user_email if view_residence.user else 'No Email' }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-secondary small fw-bold">ACCOUNT STATUS</label>
+                        <div>
+                            {% for status in statuses %}
+                                {% if status.id == view_residence.status_id %}
+                                    <span class="badge bg-primary text-white">{{ status.status }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-secondary px-4 fw-bold shadow-sm" 
+                        onclick="window.location.href='/residence'">
+                    Close Profile
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endif %}
 
 
 {% endblock %}

@@ -427,6 +427,7 @@ def residence():
                            statuses=all_statuses,
                            puroks=all_purok,
                            total_residences=total_residences,
+                           view_residence=None,
                            edit_residence=None,
                            is_archive=False)
 
@@ -545,6 +546,7 @@ def add_residence():
     return redirect(url_for('residence'))
 
 
+
 @app.route('/edit_residence/<int:id>')
 @login_required
 def edit_residence(id):
@@ -565,6 +567,22 @@ def edit_residence(id):
                            edit_residence=residence,
                            is_archive=False)
 
+@app.route('/view_residence/<int:id>')
+@login_required
+def view_residence(id):
+    residence = Residence.query.get_or_404(id)
+    if residence.deleted_at:
+        return redirect(url_for('residence'))
+
+    all_statuses = Status.query.all()
+    all_residences = Residence.query.filter_by(deleted_at=None).all()
+    
+    return render_template('BarangayAdmin/residence.html',
+                           segment='residence',
+                           view_residence=residence,
+                           statuses=all_statuses,
+                           residence=all_residences,
+                           edit_residence=None)
 
 @app.route('/update_residence', methods=['POST'])
 @login_required
