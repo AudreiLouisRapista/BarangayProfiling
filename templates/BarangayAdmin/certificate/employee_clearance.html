@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  @page {
+    size: 8.5in 11in;
+    margin: 0.6in 0.75in;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11.5pt;
+    color: #1a1a2e;
+    background: #fff;
+    line-height: 1.65;
+  }
+
+  /* ── Outer gold border frame ── */
+  .frame-outer {
+    border: 6px solid #b8960c;
+    padding: 6px;
+    min-height: 9.6in;
+  }
+  .frame-inner {
+    border: 2px solid #b8960c;
+    padding: 28px 36px 24px;
+    min-height: 9.4in;
+    position: relative;
+    background: #fff;
+  }
+
+  /* ── Corner ornaments ── */
+  .corner {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    border-color: #b8960c;
+    border-style: solid;
+  }
+  .corner-tl { top: 6px; left: 6px;  border-width: 3px 0 0 3px; }
+  .corner-tr { top: 6px; right: 6px; border-width: 3px 3px 0 0; }
+  .corner-bl { bottom: 6px; left: 6px;  border-width: 0 0 3px 3px; }
+  .corner-br { bottom: 6px; right: 6px; border-width: 0 3px 3px 0; }
+
+  /* ── Header ── */
+  .header { text-align: center; padding-bottom: 14px; margin-bottom: 14px; }
+
+  .republic {
+    font-size: 8.5pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 4px;
+  }
+
+  .seal-row {
+    display: table;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  .seal-cell { display: table-cell; vertical-align: middle; width: 70px; }
+  .seal-placeholder {
+    width: 60px; height: 60px;
+    border: 2px solid #b8960c;
+    border-radius: 50%;
+    display: inline-block;
+    line-height: 56px;
+    text-align: center;
+    font-size: 7pt;
+    color: #b8960c;
+    letter-spacing: 0.5px;
+  }
+  .header-center { display: table-cell; vertical-align: middle; text-align: center; }
+
+  .brgy-name {
+    font-size: 26pt;
+    font-weight: bold;
+    color: #1a3a6b;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    font-variant: small-caps;
+    line-height: 1.1;
+  }
+  .municipality {
+    font-size: 11pt;
+    color: #444;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+  .office {
+    font-size: 8pt;
+    letter-spacing: 2.5px;
+    color: #888;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    display: table;
+    width: 100%;
+    margin: 10px 0;
+  }
+  .divider-line {
+    display: table-cell;
+    border-bottom: 1.5px solid #b8960c;
+    vertical-align: middle;
+  }
+  .divider-diamond {
+    display: table-cell;
+    width: 18px;
+    text-align: center;
+    font-size: 10pt;
+    color: #b8960c;
+    padding: 0 4px;
+  }
+
+  /* ── Control number ── */
+  .meta-row {
+    display: table;
+    width: 100%;
+    margin-bottom: 12px;
+  }
+  .meta-left, .meta-right {
+    display: table-cell;
+    font-size: 8.5pt;
+    color: #777;
+    vertical-align: middle;
+  }
+  .meta-right { text-align: right; }
+
+  /* ── Document title ── */
+  .title-block {
+    text-align: center;
+    margin: 16px 0 20px;
+  }
+  .title-tag {
+    display: inline-block;
+    background: #1a3a6b;
+    color: #fff;
+    font-size: 14pt;
+    font-weight: bold;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    padding: 7px 36px;
+    position: relative;
+  }
+  .title-tag::before, .title-tag::after {
+    content: "◆";
+    color: #b8960c;
+    font-size: 10pt;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .title-tag::before { left: 10px; }
+  .title-tag::after  { right: 10px; }
+  .title-sub {
+    font-size: 8pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #b8960c;
+    margin-top: 5px;
+  }
+
+  /* ── Body text ── */
+  .body-text {
+    text-align: justify;
+    margin-bottom: 13px;
+    font-size: 11.5pt;
+    text-indent: 36pt;
+  }
+  .body-text.no-indent { text-indent: 0; }
+  .emp-name {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 12pt;
+    border-bottom: 1px solid #1a3a6b;
+    padding-bottom: 1px;
+  }
+  .emp-position {
+    font-weight: bold;
+    font-style: italic;
+  }
+
+  /* ── Clearance table ── */
+  .clearance-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 10.5pt;
+  }
+  .clearance-table thead tr {
+    background: #1a3a6b;
+  }
+  .clearance-table th {
+    color: #fff;
+    padding: 7px 12px;
+    font-size: 9pt;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+  .clearance-table th:first-child { border-radius: 0; }
+  .clearance-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: middle;
+  }
+  .clearance-table tr:nth-child(even) td { background: #f0f4fa; }
+  .clearance-table tr:last-child td { border-bottom: 2px solid #b8960c; }
+  .status-ok {
+    color: #1a6b3a;
+    font-weight: bold;
+    text-align: center;
+    font-size: 10pt;
+  }
+
+  /* ── Validity strip ── */
+  .validity-strip {
+    background: #f0f4fa;
+    border-left: 4px solid #b8960c;
+    padding: 7px 14px;
+    font-size: 9.5pt;
+    color: #555;
+    font-style: italic;
+    margin: 12px 0;
+    text-align: center;
+  }
+
+  /* ── Signature section ── */
+  .sig-section {
+    margin-top: 36px;
+    display: table;
+    width: 100%;
+  }
+  .sig-left, .sig-right {
+    display: table-cell;
+    width: 50%;
+    vertical-align: bottom;
+  }
+  .sig-right { text-align: center; }
+
+  .info-label { font-size: 8.5pt; color: #888; }
+  .info-value { font-size: 10pt; color: #222; font-weight: bold; }
+
+  .sig-over {
+    border-top: 1.5px solid #1a1a2e;
+    width: 210px;
+    margin: 40px auto 4px;
+  }
+  .sig-name-print {
+    font-size: 11pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .sig-title-print { font-size: 9pt; color: #555; margin-top: 1px; }
+
+  /* ── Footer ── */
+  .cert-footer {
+    margin-top: 24px;
+    text-align: center;
+  }
+  .footer-divider {
+    border: none;
+    border-top: 1px solid #b8960c;
+    margin-bottom: 6px;
+  }
+  .footer-text { font-size: 7.5pt; color: #999; letter-spacing: 0.5px; }
+</style>
+</head>
+<body>
+<div class="frame-outer">
+<div class="frame-inner">
+  <!-- Corner ornaments -->
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="republic">Republic of the Philippines &nbsp;&#9670;&nbsp; Province of South Cotabato</div>
+    <div class="seal-row">
+      <div class="seal-cell" style="text-align:right; padding-right:16px;">
+        <div class="seal-placeholder">SEAL</div>
+      </div>
+      <div class="header-center">
+        <div class="brgy-name">{{ barangay_name }}</div>
+        <div class="municipality">{{ municipality }}</div>
+        <div class="office">Office of the Barangay Captain</div>
+      </div>
+      <div class="seal-cell" style="text-align:left; padding-left:16px;">
+        <div class="seal-placeholder">SEAL</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top divider -->
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-diamond">&#9670;</div>
+    <div class="divider-line"></div>
+  </div>
+
+  <!-- Meta row -->
+  <div class="meta-row">
+    <div class="meta-left">Series of {{ issued_date.strftime('%Y') }}</div>
+    <div class="meta-right">Control No.: <strong>BC-CLR-{{ issued_date.strftime('%Y') }}-{{ '%04d' % employee.id }}</strong></div>
+  </div>
+
+  <!-- Title -->
+  <div class="title-block">
+    <div class="title-tag">Employee Clearance</div>
+    <div class="title-sub">Official Document &nbsp;&#9670;&nbsp; {{ barangay_name }}</div>
+  </div>
+
+  <!-- Body -->
+  <p class="body-text no-indent"><strong>TO WHOM IT MAY CONCERN:</strong></p>
+
+  <p class="body-text">
+    This is to certify that <span class="emp-name">{{ employee.employee_firstname }} {{ employee.employee_lastname }}</span>,
+    holding the position of <span class="emp-position">{{ employee.position.position_type }}</span>
+    at {{ barangay_name }}, {{ municipality }}, has been duly
+    cleared of all accountabilities, obligations, and responsibilities
+    as of the date hereof.
+  </p>
+
+  <p class="body-text">
+    The said employee has satisfactorily settled all financial, property, and
+    administrative accountabilities with the offices concerned, as duly
+    certified and enumerated below:
+  </p>
+
+  <!-- Clearance Table -->
+  <table class="clearance-table">
+    <thead>
+      <tr>
+        <th style="width:50%;">Accountability / Office</th>
+        <th style="width:20%; text-align:center;">Status</th>
+        <th style="width:30%;">Remarks</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Financial Obligations &mdash; Barangay Treasury</td>
+        <td class="status-ok">&#10004; CLEARED</td>
+        <td>No outstanding balance</td>
+      </tr>
+      <tr>
+        <td>Equipment &amp; Property &mdash; Barangay Properties</td>
+        <td class="status-ok">&#10004; CLEARED</td>
+        <td>All items returned</td>
+      </tr>
+      <tr>
+        <td>Administrative Files &amp; Records</td>
+        <td class="status-ok">&#10004; CLEARED</td>
+        <td>All documents filed</td>
+      </tr>
+      <tr>
+        <td>Pending Cases / Complaints</td>
+        <td class="status-ok">&#10004; CLEARED</td>
+        <td>No pending cases on record</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="body-text">
+    This clearance is issued upon the request of the above-named employee
+    for whatever legal purpose it may serve.
+  </p>
+
+  <!-- Validity strip -->
+  <div class="validity-strip">
+    &#128197;&nbsp; Issued on: <strong>{{ issued_date.strftime('%B %d, %Y') }}</strong>
+    &nbsp;&nbsp;&#9670;&nbsp;&nbsp;
+    Valid for: <strong>30 days</strong> from date of issue
+  </div>
+
+  <!-- Signature -->
+  <div class="sig-section">
+    <div class="sig-left" style="padding-left:8px;">
+      {% if employee.term_start_date %}
+      <div style="margin-bottom:6px;">
+        <div class="info-label">Term Start Date</div>
+        <div class="info-value">{{ employee.term_start_date }}</div>
+      </div>
+      {% endif %}
+      <div>
+        <div class="info-label">Contact Number</div>
+        <div class="info-value">{{ employee.employee_phonenumber or '—' }}</div>
+      </div>
+    </div>
+    <div class="sig-right">
+      <div class="sig-over"></div>
+      <div class="sig-name-print">{{ captain_name }}</div>
+      <div class="sig-title-print">Punong Barangay</div>
+      <div class="sig-title-print">{{ barangay_name }}, {{ municipality }}</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="cert-footer">
+    <hr class="footer-divider"/>
+    <div class="footer-text">
+      {{ barangay_name }} &bull; {{ municipality }}, South Cotabato &bull;
+      Issued: {{ issued_date.strftime('%B %d, %Y') }} &bull;
+      This document is NOT VALID without the official dry seal and wet signature of the Punong Barangay.
+    </div>
+  </div>
+
+</div>
+</div>
+</body>
+</html>

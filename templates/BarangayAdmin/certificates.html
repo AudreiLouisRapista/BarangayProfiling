@@ -2,56 +2,107 @@
 
 {% block content %}
 <div class="container-fluid pt-4">
-    
+
     <div class="row mb-4">
         <div class="col-md-6">
-            <h2 class="fw-bold"><i class="bi bi-file-earmark-pdf-fill me-2 text-danger"></i>Certificate Issuance</h2>
-            <p class="text-muted">Generate and print official documents for barangay employees.</p>
+            <h2 class="fw-bold">
+                <i class="bi bi-file-earmark-pdf-fill me-2 text-danger"></i>Certificate Issuance
+            </h2>
+            <p class="text-muted">Generate official PDF documents for employees and residents.</p>
         </div>
     </div>
 
     <div class="row g-4">
+
+        <!-- ── Left: Select Person ── -->
         <div class="col-md-5">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold">1. Select Employee</h5>
+                <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0 fw-bold">1. Select Person</h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="personType" id="typeEmployee" value="employee" checked>
+                        <label class="btn btn-outline-primary" for="typeEmployee">
+                            <i class="bi bi-person-badge me-1"></i>Employee
+                        </label>
+                        <input type="radio" class="btn-check" name="personType" id="typeResident" value="resident">
+                        <label class="btn btn-outline-primary" for="typeResident">
+                            <i class="bi bi-house me-1"></i>Resident
+                        </label>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">Search Name</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
-                            <input type="text" class="form-control" placeholder="Type employee name...">
+                            <input type="text" id="searchInput" class="form-control" placeholder="Type name to search...">
                         </div>
                     </div>
-                    
-                    <div class="list-group list-group-flush border rounded overflow-auto" style="max-height: 300px;">
-                        <button type="button" class="list-group-item list-group-item-action active py-3">
+
+                    <!-- Employee List -->
+                    <div id="employeeList"
+                         class="list-group list-group-flush border rounded overflow-auto"
+                         style="max-height: 300px;">
+                        {% for emp in employees %}
+                        <button type="button"
+                                class="list-group-item list-group-item-action person-item py-3"
+                                data-id="{{ emp.id }}"
+                                data-type="employee"
+                                data-name="{{ emp.employee_firstname }} {{ emp.employee_lastname }}"
+                                data-sub="{{ emp.position.position_type }}">
                             <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">Hon. Ricardo Cruz Jr.</h6>
-                                <small>EM-2023-01</small>
+                                <h6 class="mb-1">{{ emp.employee_firstname }} {{ emp.employee_lastname }}</h6>
+                                <small class="text-muted">#{{ '%04d' % emp.id }}</small>
                             </div>
-                            <small>Barangay Captain</small>
+                            <small class="text-muted">{{ emp.position.position_type }}</small>
                         </button>
-                        <button type="button" class="list-group-item list-group-item-action py-3">
+                        {% else %}
+                        <div class="list-group-item text-muted small py-3">
+                            <i class="bi bi-info-circle me-1"></i> No active employees found.
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Resident List (hidden by default) -->
+                    <div id="residentList"
+                         class="list-group list-group-flush border rounded overflow-auto d-none"
+                         style="max-height: 300px;">
+                        {% for res in residences %}
+                        <button type="button"
+                                class="list-group-item list-group-item-action person-item py-3"
+                                data-id="{{ res.id }}"
+                                data-type="resident"
+                                data-name="{{ res.residence_firstname }} {{ res.residence_lastname }}"
+                                data-sub="Purok {{ res.address.purok_number if res.address else '' }}">
                             <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">Maria Clara Sanchez</h6>
-                                <small>EM-2023-04</small>
+                                <h6 class="mb-1">{{ res.residence_firstname }} {{ res.residence_lastname }}</h6>
+                                <small class="text-muted">#{{ '%04d' % res.id }}</small>
                             </div>
-                            <small>Barangay Treasurer</small>
+                            <small class="text-muted">
+                                {% if res.address %}
+                                    Purok {{ res.address.purok_number }}
+                                    {% if res.address.street_name %}, {{ res.address.street_name }}{% endif %}
+                                {% endif %}
+                            </small>
                         </button>
-                        <button type="button" class="list-group-item list-group-item-action py-3">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">Juan Miguel Reyes</h6>
-                                <small>EM-2024-02</small>
-                            </div>
-                            <small>BHW Lead</small>
-                        </button>
+                        {% else %}
+                        <div class="list-group-item text-muted small py-3">
+                            <i class="bi bi-info-circle me-1"></i> No active residents found.
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Selected Person Banner -->
+                    <div id="selectedInfo" class="alert alert-primary mt-3 d-none small mb-0">
+                        <i class="bi bi-person-check-fill me-1"></i>
+                        <strong id="selectedName"></strong>
+                        <span id="selectedMeta" class="text-muted ms-1"></span>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- ── Right: Choose Document Type ── -->
         <div class="col-md-7">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3">
@@ -59,54 +110,188 @@
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="card h-100 border text-center p-3 hover-card">
-                                <i class="bi bi-briefcase-fill text-primary display-6 mb-2"></i>
-                                <h6 class="fw-bold">Certificate of Employment</h6>
-                                <p class="small text-muted mb-3">Verification of active service and position.</p>
-                                <button class="btn btn-primary btn-sm mt-auto"><i class="bi bi-printer me-1"></i> Generate</button>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card h-100 border text-center p-3 hover-card">
-                                <i class="bi bi-award-fill text-warning display-6 mb-2"></i>
-                                <h6 class="fw-bold">Excellence Award</h6>
-                                <p class="small text-muted mb-3">Recognition for outstanding community service.</p>
-                                <button class="btn btn-outline-warning btn-sm mt-auto"><i class="bi bi-printer me-1"></i> Generate</button>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
+
+                        <!-- Employee Clearance -->
+                        <div class="col-md-6 doc-card-wrap" data-requires="employee">
                             <div class="card h-100 border text-center p-3 hover-card">
                                 <i class="bi bi-shield-check text-success display-6 mb-2"></i>
                                 <h6 class="fw-bold">Employee Clearance</h6>
-                                <p class="small text-muted mb-3">Document for resignation or transfer purposes.</p>
-                                <button class="btn btn-outline-success btn-sm mt-auto"><i class="bi bi-printer me-1"></i> Generate</button>
+                                <p class="small text-muted mb-3">
+                                    Clearance document for resignation or transfer purposes.
+                                </p>
+                                <button class="btn btn-outline-success btn-sm mt-auto generate-btn"
+                                        data-cert="employee_clearance" disabled>
+                                    <i class="bi bi-file-earmark-pdf me-1"></i> Generate PDF
+                                </button>
                             </div>
                         </div>
-                        <div class="col-md-6">
+
+                        <!-- Certificate of Residency -->
+                        <div class="col-md-6 doc-card-wrap" data-requires="resident">
                             <div class="card h-100 border text-center p-3 hover-card">
-                                <i class="bi bi-pencil-square text-secondary display-6 mb-2"></i>
-                                <h6 class="fw-bold">Commendation Letter</h6>
-                                <p class="small text-muted mb-3">Custom letter for specific achievements.</p>
-                                <button class="btn btn-outline-secondary btn-sm mt-auto"><i class="bi bi-printer me-1"></i> Generate</button>
+                                <i class="bi bi-house-fill text-primary display-6 mb-2"></i>
+                                <h6 class="fw-bold">Certificate of Residency</h6>
+                                <p class="small text-muted mb-2">
+                                    Official proof of residency within the barangay.
+                                </p>
+                                <select class="form-select form-select-sm mb-2" id="residencyPurpose">
+                                    <option value="whatever purpose it may serve">General Purpose</option>
+                                    <option value="scholarship application">Scholarship Application</option>
+                                    <option value="employment application">Employment Application</option>
+                                    <option value="bank requirements">Bank Requirements</option>
+                                    <option value="school enrollment">School Enrollment</option>
+                                    <option value="government requirements">Government Requirements</option>
+                                </select>
+                                <button class="btn btn-outline-primary btn-sm mt-auto generate-btn"
+                                        data-cert="residency" disabled>
+                                    <i class="bi bi-file-earmark-pdf me-1"></i> Generate PDF
+                                </button>
                             </div>
+                        </div>
+
+                        <!-- Certificate of Employment (coming soon) -->
+                        <div class="col-md-6 doc-card-wrap" data-requires="employee">
+                            <div class="card h-100 border text-center p-3 hover-card" style="opacity:0.5;">
+                                <i class="bi bi-briefcase-fill text-secondary display-6 mb-2"></i>
+                                <h6 class="fw-bold">Certificate of Employment</h6>
+                                <p class="small text-muted mb-3">Verification of active service and position.</p>
+                                <button class="btn btn-outline-secondary btn-sm mt-auto" disabled>
+                                    <i class="bi bi-clock me-1"></i> Coming Soon
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Excellence Award (coming soon) -->
+                        <div class="col-md-6 doc-card-wrap" data-requires="employee">
+                            <div class="card h-100 border text-center p-3 hover-card" style="opacity:0.5;">
+                                <i class="bi bi-award-fill text-warning display-6 mb-2"></i>
+                                <h6 class="fw-bold">Excellence Award</h6>
+                                <p class="small text-muted mb-3">Recognition for outstanding community service.</p>
+                                <button class="btn btn-outline-secondary btn-sm mt-auto" disabled>
+                                    <i class="bi bi-clock me-1"></i> Coming Soon
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Loading status -->
+                    <div id="genStatus" class="alert alert-info mt-3 d-none mb-0">
+                        <div class="d-flex align-items-center">
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            Generating PDF, please wait…
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
 <style>
-    .hover-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-        cursor: pointer;
-    }
-    .hover-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        border-color: #0d6efd !important;
-    }
+.hover-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+.hover-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+    border-color: #0d6efd !important;
+}
 </style>
+
+<script>
+(function () {
+    let selected = null;
+
+    const searchInput  = document.getElementById('searchInput');
+    const selectedInfo = document.getElementById('selectedInfo');
+    const selectedName = document.getElementById('selectedName');
+    const selectedMeta = document.getElementById('selectedMeta');
+    const genStatus    = document.getElementById('genStatus');
+    const empList      = document.getElementById('employeeList');
+    const resList      = document.getElementById('residentList');
+
+    /* ── Toggle Employee / Resident ── */
+    document.querySelectorAll('input[name="personType"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const isEmp = radio.value === 'employee';
+            empList.classList.toggle('d-none', !isEmp);
+            resList.classList.toggle('d-none',  isEmp);
+            clearSelection();
+            searchInput.value = '';
+        });
+    });
+
+    /* ── Search ── */
+    searchInput.addEventListener('input', () => {
+        const q = searchInput.value.toLowerCase();
+        const activeList = document.getElementById('typeEmployee').checked ? empList : resList;
+        activeList.querySelectorAll('.person-item').forEach(btn => {
+            btn.style.display = btn.dataset.name.toLowerCase().includes(q) ? '' : 'none';
+        });
+    });
+
+    /* ── Select person ── */
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.person-item');
+        if (!btn) return;
+        document.querySelectorAll('.person-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selected = { ...btn.dataset };
+        selectedInfo.classList.remove('d-none');
+        selectedName.textContent = selected.name;
+        selectedMeta.textContent = '— ' + selected.sub;
+        updateButtons();
+    });
+
+    /* ── Enable buttons based on type match ── */
+    function updateButtons() {
+        document.querySelectorAll('.generate-btn').forEach(btn => {
+            const requires = btn.closest('.doc-card-wrap').dataset.requires;
+            btn.disabled = !(selected && selected.type === requires);
+        });
+    }
+
+    /* ── Generate PDF ── */
+    document.querySelectorAll('.generate-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!selected) return;
+            const cert = btn.dataset.cert;
+            let url = '';
+
+            if (cert === 'employee_clearance') {
+                url = `/certificate/employee-clearance/${selected.id}`;
+            } else if (cert === 'residency') {
+                const purpose = encodeURIComponent(
+                    document.getElementById('residencyPurpose').value
+                );
+                url = `/certificate/residency/${selected.id}?purpose=${purpose}`;
+            }
+            if (!url) return;
+
+            genStatus.classList.remove('d-none');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generating…';
+
+            window.open(url, '_blank');
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-file-earmark-pdf me-1"></i> Generate PDF';
+                genStatus.classList.add('d-none');
+            }, 2500);
+        });
+    });
+
+    function clearSelection() {
+        selected = null;
+        selectedInfo.classList.add('d-none');
+        document.querySelectorAll('.person-item').forEach(b => b.classList.remove('active'));
+        updateButtons();
+    }
+})();
+</script>
 {% endblock %}

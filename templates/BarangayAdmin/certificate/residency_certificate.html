@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  @page {
+    size: 8.5in 11in;
+    margin: 0.6in 0.75in;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11.5pt;
+    color: #1a1a2e;
+    background: #fff;
+    line-height: 1.65;
+  }
+
+  /* ── Outer border frame ── */
+  .frame-outer {
+    border: 6px solid #6b1a1a;
+    padding: 6px;
+    min-height: 9.6in;
+  }
+  .frame-inner {
+    border: 2px solid #6b1a1a;
+    padding: 28px 36px 24px;
+    min-height: 9.4in;
+    position: relative;
+    background: #fff;
+  }
+
+  /* ── Corner ornaments ── */
+  .corner {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    border-color: #6b1a1a;
+    border-style: solid;
+  }
+  .corner-tl { top: 6px; left: 6px;  border-width: 3px 0 0 3px; }
+  .corner-tr { top: 6px; right: 6px; border-width: 3px 3px 0 0; }
+  .corner-bl { bottom: 6px; left: 6px;  border-width: 0 0 3px 3px; }
+  .corner-br { bottom: 6px; right: 6px; border-width: 0 3px 3px 0; }
+
+  /* ── Header ── */
+  .header { text-align: center; padding-bottom: 14px; margin-bottom: 14px; }
+  .republic {
+    font-size: 8.5pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 4px;
+  }
+
+  .seal-row { display: table; width: 100%; margin-bottom: 8px; }
+  .seal-cell { display: table-cell; vertical-align: middle; width: 70px; }
+  .seal-placeholder {
+    width: 60px; height: 60px;
+    border: 2px solid #6b1a1a;
+    border-radius: 50%;
+    display: inline-block;
+    line-height: 56px;
+    text-align: center;
+    font-size: 7pt;
+    color: #6b1a1a;
+    letter-spacing: 0.5px;
+  }
+  .header-center { display: table-cell; vertical-align: middle; text-align: center; }
+
+  .brgy-name {
+    font-size: 26pt;
+    font-weight: bold;
+    color: #6b1a1a;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    font-variant: small-caps;
+    line-height: 1.1;
+  }
+  .municipality { font-size: 11pt; color: #444; letter-spacing: 1px; margin-top: 2px; }
+  .office {
+    font-size: 8pt;
+    letter-spacing: 2.5px;
+    color: #888;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  /* ── Divider ── */
+  .divider { display: table; width: 100%; margin: 10px 0; }
+  .divider-line { display: table-cell; border-bottom: 1.5px solid #6b1a1a; vertical-align: middle; }
+  .divider-diamond {
+    display: table-cell;
+    width: 18px;
+    text-align: center;
+    font-size: 10pt;
+    color: #6b1a1a;
+    padding: 0 4px;
+  }
+
+  /* ── Meta row ── */
+  .meta-row { display: table; width: 100%; margin-bottom: 12px; }
+  .meta-left, .meta-right {
+    display: table-cell;
+    font-size: 8.5pt;
+    color: #777;
+    vertical-align: middle;
+  }
+  .meta-right { text-align: right; }
+
+  /* ── Document title ── */
+  .title-block { text-align: center; margin: 16px 0 20px; }
+  .title-tag {
+    display: inline-block;
+    background: #6b1a1a;
+    color: #fff;
+    font-size: 14pt;
+    font-weight: bold;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    padding: 7px 36px;
+    position: relative;
+  }
+  .title-tag::before, .title-tag::after {
+    content: "◆";
+    color: #f0c040;
+    font-size: 10pt;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .title-tag::before { left: 10px; }
+  .title-tag::after  { right: 10px; }
+  .title-sub {
+    font-size: 8pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #6b1a1a;
+    margin-top: 5px;
+  }
+
+  /* ── Body ── */
+  .body-text {
+    text-align: justify;
+    margin-bottom: 13px;
+    font-size: 11.5pt;
+    text-indent: 36pt;
+  }
+  .body-text.no-indent { text-indent: 0; }
+  .res-name {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 12pt;
+    border-bottom: 1px solid #6b1a1a;
+    padding-bottom: 1px;
+  }
+  .res-address { font-weight: bold; font-style: italic; }
+
+  /* ── Info table ── */
+  .info-table {
+    width: 88%;
+    margin: 16px auto;
+    border-collapse: collapse;
+    font-size: 10.5pt;
+  }
+  .info-table tr { border-bottom: 1px solid #e5e5e5; }
+  .info-table tr:first-child { border-top: 2px solid #6b1a1a; }
+  .info-table tr:last-child  { border-bottom: 2px solid #6b1a1a; }
+  .info-table td { padding: 7px 14px; vertical-align: top; }
+  .info-table td:first-child {
+    font-weight: bold;
+    color: #6b1a1a;
+    width: 38%;
+    font-size: 10pt;
+    letter-spacing: 0.3px;
+  }
+  .info-table tr:nth-child(even) td { background: #fdf5f5; }
+
+  /* ── Validity strip ── */
+  .validity-strip {
+    background: #fdf5f5;
+    border-left: 4px solid #6b1a1a;
+    padding: 7px 14px;
+    font-size: 9.5pt;
+    color: #555;
+    font-style: italic;
+    margin: 12px 0;
+    text-align: center;
+  }
+
+  /* ── OR Box ── */
+  .or-box {
+    border: 1px solid #ccc;
+    border-left: 3px solid #6b1a1a;
+    padding: 10px 16px;
+    font-size: 9.5pt;
+    margin-top: 14px;
+    background: #fafafa;
+    display: table;
+    width: 100%;
+  }
+  .or-col { display: table-cell; width: 50%; padding: 2px 8px; }
+  .or-label { font-weight: bold; color: #6b1a1a; font-size: 8.5pt; letter-spacing: 0.5px; }
+  .or-value {
+    border-bottom: 1px solid #aaa;
+    display: block;
+    min-height: 16px;
+    margin-top: 1px;
+  }
+
+  /* ── Signature ── */
+  .sig-section { margin-top: 36px; display: table; width: 100%; }
+  .sig-left, .sig-right { display: table-cell; width: 50%; vertical-align: bottom; }
+  .sig-right { text-align: center; }
+  .info-label { font-size: 8.5pt; color: #888; }
+  .info-value { font-size: 10pt; color: #222; font-weight: bold; }
+  .sig-over {
+    border-top: 1.5px solid #1a1a2e;
+    width: 210px;
+    margin: 40px auto 4px;
+  }
+  .sig-name-print {
+    font-size: 11pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .sig-title-print { font-size: 9pt; color: #555; margin-top: 1px; }
+
+  /* ── Footer ── */
+  .cert-footer { margin-top: 24px; text-align: center; }
+  .footer-divider { border: none; border-top: 1px solid #6b1a1a; margin-bottom: 6px; }
+  .footer-text { font-size: 7.5pt; color: #999; letter-spacing: 0.5px; }
+</style>
+</head>
+<body>
+<div class="frame-outer">
+<div class="frame-inner">
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="republic">Republic of the Philippines &nbsp;&#9670;&nbsp; Province of South Cotabato</div>
+    <div class="seal-row">
+      <div class="seal-cell" style="text-align:right; padding-right:16px;">
+        <div class="seal-placeholder">SEAL</div>
+      </div>
+      <div class="header-center">
+        <div class="brgy-name">{{ barangay_name }}</div>
+        <div class="municipality">{{ municipality }}</div>
+        <div class="office">Office of the Barangay Captain</div>
+      </div>
+      <div class="seal-cell" style="text-align:left; padding-left:16px;">
+        <div class="seal-placeholder">SEAL</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-diamond">&#9670;</div>
+    <div class="divider-line"></div>
+  </div>
+
+  <!-- Meta -->
+  <div class="meta-row">
+    <div class="meta-left">Series of {{ issued_date.strftime('%Y') }}</div>
+    <div class="meta-right">Control No.: <strong>BC-RES-{{ issued_date.strftime('%Y%m%d') }}-{{ '%04d' % residence.id }}</strong></div>
+  </div>
+
+  <!-- Title -->
+  <div class="title-block">
+    <div class="title-tag">Certificate of Residency</div>
+    <div class="title-sub">Official Document &nbsp;&#9670;&nbsp; {{ barangay_name }}</div>
+  </div>
+
+  <!-- Body -->
+  <p class="body-text no-indent"><strong>TO WHOM IT MAY CONCERN:</strong></p>
+
+  {% set fullname %}{{ residence.residence_firstname }}{% if residence.residence_middlename %} {{ residence.residence_middlename }}{% endif %} {{ residence.residence_lastname }}{% if residence.residence_suffix %} {{ residence.residence_suffix }}{% endif %}{% endset %}
+
+  {% set full_address %}{% if residence.address %}{% if residence.address.house_number %}No. {{ residence.address.house_number }}, {% endif %}{% if residence.address.street_name %}{{ residence.address.street_name }}, {% endif %}{% if residence.address.purok_number %}Purok {{ residence.address.purok_number }}, {% endif %}{% endif %}{{ barangay_name }}, {{ municipality }}{% endset %}
+
+  <p class="body-text">
+    This is to certify that <span class="res-name">{{ fullname | trim }}</span>
+    is a bonafide resident of
+    <span class="res-address">{{ full_address | trim }}</span>,
+    Philippines, and has been residing in the said address up to the present time.
+  </p>
+
+  <p class="body-text">
+    This certification is being issued upon the personal request of the
+    above-named individual for the purpose of
+    <strong>{{ purpose }}</strong> and for whatever legal purpose it may serve.
+  </p>
+
+  <!-- Info Table -->
+  <table class="info-table">
+    <tr>
+      <td>Full Name:</td>
+      <td><strong>{{ fullname | trim }}</strong></td>
+    </tr>
+    <tr>
+      <td>Complete Address:</td>
+      <td>{{ full_address | trim }}</td>
+    </tr>
+    {% if residence.residence_birthday %}
+    <tr>
+      <td>Date of Birth:</td>
+      <td>{{ residence.residence_birthday }}</td>
+    </tr>
+    {% endif %}
+    {% if residence.residence_civilStatus %}
+    <tr>
+      <td>Civil Status:</td>
+      <td>{{ residence.residence_civilStatus }}</td>
+    </tr>
+    {% endif %}
+    {% if residence.residence_citizenship %}
+    <tr>
+      <td>Citizenship:</td>
+      <td>{{ residence.residence_citizenship }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td>Purpose:</td>
+      <td>{{ purpose }}</td>
+    </tr>
+    <tr>
+      <td>Date Issued:</td>
+      <td><strong>{{ issued_date.strftime('%B %d, %Y') }}</strong></td>
+    </tr>
+  </table>
+
+  <!-- Validity -->
+  <div class="validity-strip">
+    &#128197;&nbsp; Issued on: <strong>{{ issued_date.strftime('%B %d, %Y') }}</strong>
+    &nbsp;&nbsp;&#9670;&nbsp;&nbsp;
+    Valid for: <strong>30 days</strong> from date of issue
+  </div>
+
+  <!-- OR/CTC Box -->
+  <div class="or-box">
+    <div class="or-col">
+      <div class="or-label">O.R. No.</div>
+      <span class="or-value">&nbsp;</span>
+    </div>
+    <div class="or-col">
+      <div class="or-label">Amount Paid</div>
+      <span class="or-value">&nbsp;</span>
+    </div>
+    <div class="or-col" style="padding-top:8px;">
+      <div class="or-label">CTC No.</div>
+      <span class="or-value">&nbsp;</span>
+    </div>
+    <div class="or-col" style="padding-top:8px;">
+      <div class="or-label">Issued at / Date</div>
+      <span class="or-value">&nbsp;</span>
+    </div>
+  </div>
+
+  <!-- Signature -->
+  <div class="sig-section">
+    <div class="sig-left" style="padding-left:8px;">
+      {% if residence.residence_phoneNumber %}
+      <div style="margin-bottom:6px;">
+        <div class="info-label">Contact Number</div>
+        <div class="info-value">{{ residence.residence_phoneNumber }}</div>
+      </div>
+      {% endif %}
+      <div>
+        <div class="info-label">Date Recorded</div>
+        <div class="info-value">{{ residence.created_at.strftime('%B %d, %Y') if residence.created_at else '—' }}</div>
+      </div>
+    </div>
+    <div class="sig-right">
+      <div class="sig-over"></div>
+      <div class="sig-name-print">{{ captain_name }}</div>
+      <div class="sig-title-print">Punong Barangay</div>
+      <div class="sig-title-print">{{ barangay_name }}, {{ municipality }}</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="cert-footer">
+    <hr class="footer-divider"/>
+    <div class="footer-text">
+      {{ barangay_name }} &bull; {{ municipality }}, South Cotabato &bull;
+      Issued: {{ issued_date.strftime('%B %d, %Y') }} &bull;
+      This document is NOT VALID without the official dry seal and wet signature of the Punong Barangay.
+    </div>
+  </div>
+
+</div>
+</div>
+</body>
+</html>
