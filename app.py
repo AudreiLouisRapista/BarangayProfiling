@@ -703,10 +703,6 @@ def restore_residence(id):
 
 
 
-
-
-
-
 @app.route('/finances')
 @login_required
 def finances():

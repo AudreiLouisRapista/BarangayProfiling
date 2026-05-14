@@ -1,0 +1,14 @@
+    .card { border-radius: 14px; }
+    .table thead th { font-weight: 600; color: #495057; text-transform: uppercase; }
+    .cycle-step {
+        display: flex; align-items: center; gap: 0;
+    }
+    .step-box {
+        display: flex; align-items: center; gap: 8px;
+        padding: 7px 14px; border-radius: 8px; font-size: .82rem; font-weight: 600;
+        white-space: nowrap;
+    }
+    .step-box.done { background: #d1e7dd; color: #0f5132; }
+    .step-box.active { background: #cfe2ff; color: #084298; border: 1.5px solid #9ec5fe; }
+    .step-box.pending { background: #f1f3f5; color: #868e96; }
+    .step-arrow { color: #adb5bd; font-size: 1rem; padding: 0 4px; }
