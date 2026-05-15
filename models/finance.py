@@ -42,21 +42,36 @@ class TransactionStatus(db.Model):
     transactions = db.relationship('Transaction', backref='transaction_status')
 
 
-# ── Fiscal Year ───────────────────────────────────────────────────────────────
+# ── Fiscal Status ─────────────────────────────────────────────────────────
+class FiscalStatus(db.Model):
+    __tablename__ = 'fiscal_status'
+    id          = db.Column(db.Integer, primary_key=True)
+    fiscal_type = db.Column(db.String(50))  # 'active', 'closed', etc.
 
+    # One-to-many: One status → many fiscal years
+    fiscal_years = db.relationship('FiscalYear', backref='fiscal_status', lazy='dynamic')
+
+
+# ── Fiscal Year ───────────────────────────────────────────────────────────────
 class FiscalYear(db.Model):
     __tablename__ = 'fiscal_year'
     id                      = db.Column(db.Integer, primary_key=True)
-    fiscal_year             = db.Column(db.String(4), nullable=False, unique=True)  # e.g. '2026'
+    fiscal_status_id        = db.Column(db.Integer, db.ForeignKey('fiscal_status.id'), nullable=False)
+    fiscal_year             = db.Column(db.Year, nullable=False, unique=True)  # Fixed: use Year type
     total_approved_budget   = db.Column(db.Numeric(15, 2), nullable=False, default=0.00)
-    ordinance_number        = db.Column(db.String(100), nullable=False)             # e.g. 'Ordinance No. 2026-01'
+    ordinance_number        = db.Column(db.String(100), nullable=False)
     ordinance_date          = db.Column(db.Date, nullable=False)
-    status                  = db.Column(db.String(20), nullable=False, default='active')  # 'draft', 'active', 'closed'
 
-    # Relationships
-    transactions       = db.relationship('Transaction', backref='fiscal_year')
-    budget_allocations = db.relationship('BudgetAllocation', backref='fiscal_year')
-
+    # FIXED: Proper relationship with foreign_keys specified
+    fiscal_status = db.relationship(
+        'FiscalStatus', 
+        foreign_keys=[fiscal_status_id],
+        uselist=False  # One-to-one
+    )
+    
+    # Other relationships
+    transactions = db.relationship('Transaction', backref='fiscal_year', lazy='dynamic')
+    budget_allocations = db.relationship('BudgetAllocation', backref='fiscal_year', lazy='dynamic')
 
 # ── Budget Allocation ─────────────────────────────────────────────────────────
 

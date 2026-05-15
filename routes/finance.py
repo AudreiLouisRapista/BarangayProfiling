@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
-from flask import render_template, request, redirect, url_for, flash, session
+from flask import render_template, request, redirect, url_for, flash, session, jsonify
 from app import app, login_required
 from extensions import db
 from models.finance import (
     Transaction, TransactionType, DocumentType,
-    CategoryType, TransactionStatus, FiscalYear, BudgetAllocation
+    CategoryType, TransactionStatus, FiscalYear, BudgetAllocation, FiscalStatus
 )
 from models.user import Admin
 
@@ -27,6 +27,15 @@ def generate_doc_number(doc_type, fiscal_year_label):
         new_num = 1
 
     return f"{doc_type}-{fiscal_year_label}-{new_num:04d}"
+
+
+# ── Helper: Get Status IDs (Safe function) ───────────────────────────────────
+def get_status_ids():
+    """Get active/closed status IDs safely"""
+    with db.app.app_context():
+        active_id = db.session.query(FiscalStatus.id).filter_by(fiscal_type='active').scalar()
+        closed_id = db.session.query(FiscalStatus.id).filter_by(fiscal_type='closed').scalar()
+        return active_id, closed_id
 
 
 # ── Helper: Recalculate Running Balance ──────────────────────────────────────
@@ -60,8 +69,9 @@ def recalculate_running_balance(fiscal_year_id):
 @app.route('/finances')
 @login_required
 def finances():
-    # Get active fiscal year
-    active_fiscal_year = FiscalYear.query.filter_by(status='active').first()
+    # ✅ FIXED: Get active fiscal year using fiscal_type_id
+    active_status_id, _ = get_status_ids()
+    active_fiscal_year = FiscalYear.query.filter_by(fiscal_type_id=active_status_id).first() if active_status_id else None
 
     transactions        = []
     budget_allocations  = []
@@ -198,7 +208,7 @@ def add_transaction():
 def edit_transaction(id):
     transaction = Transaction.query.get_or_404(id)
 
-    transactions        = Transaction.query.filter_by(
+    transactions = Transaction.query.filter_by(
         fiscal_year_id=transaction.fiscal_year_id
     ).order_by(Transaction.transaction_date.desc()).all()
 
@@ -207,7 +217,10 @@ def edit_transaction(id):
     category_types       = CategoryType.query.all()
     transaction_statuses = TransactionStatus.query.all()
     all_fiscal_years     = FiscalYear.query.order_by(FiscalYear.fiscal_year.desc()).all()
-    active_fiscal_year   = FiscalYear.query.filter_by(status='active').first()
+    
+    # ✅ FIXED: Get active fiscal year
+    active_status_id, _ = get_status_ids()
+    active_fiscal_year = FiscalYear.query.filter_by(fiscal_type_id=active_status_id).first() if active_status_id else None
 
     return render_template(
         'BarangayAdmin/finances.html',
@@ -301,15 +314,21 @@ def add_fiscal_year():
             flash(f'Fiscal Year {fiscal_year} already exists.', 'warning')
             return redirect(url_for('finances'))
 
-        # Set all existing active years to closed before adding new active one
-        FiscalYear.query.filter_by(status='active').update({'status': 'closed'})
+        # ✅ FIXED: Close existing active fiscal years
+        active_status_id, closed_status_id = get_status_ids()
+        if active_status_id and closed_status_id:
+            FiscalYear.query.filter_by(fiscal_type_id=active_status_id).update({
+                'fiscal_type_id': closed_status_id
+            })
+            db.session.commit()
 
+        # ✅ FIXED: Create new FY with fiscal_type_id
         new_fy = FiscalYear(
             fiscal_year            = fiscal_year,
             total_approved_budget  = approved_budget,
             ordinance_number       = ordinance_number,
             ordinance_date         = ordinance_date,
-            status                 = 'active',
+            fiscal_type_id         = active_status_id,  # ✅ Use FK ID
         )
         db.session.add(new_fy)
         db.session.commit()
@@ -322,6 +341,7 @@ def add_fiscal_year():
 
     return redirect(url_for('finances'))
 
+
 @app.route('/finances/data')
 @login_required
 def finances_data():
@@ -333,7 +353,9 @@ def finances_data():
             Transaction.transaction_date.desc(), Transaction.id.desc()
         ).all()
     else:
-        active_fy = FiscalYear.query.filter_by(status='active').first()
+        # ✅ FIXED: Get active FY
+        active_status_id, _ = get_status_ids()
+        active_fy = FiscalYear.query.filter_by(fiscal_type_id=active_status_id).first() if active_status_id else None
         if active_fy:
             transactions = Transaction.query.filter_by(fiscal_year_id=active_fy.id).order_by(
                 Transaction.transaction_date.desc(), Transaction.id.desc()
@@ -368,6 +390,9 @@ def finances_data():
             'fiscal_year_id': t.fiscal_year_id
         })
 
+    # ✅ FIXED: Define budget_allocations
+    budget_allocations = BudgetAllocation.query.all()
+
     return jsonify({
         'transactions': tx_data,
         'budget_allocations': [
@@ -381,6 +406,7 @@ def finances_data():
             for ba in budget_allocations
         ]
     })
+
 
 @app.route('/edit_transaction/<int:id>')
 @login_required
