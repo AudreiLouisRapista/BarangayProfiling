@@ -11,7 +11,7 @@ app.config['SECRET_KEY'] = 'your-secret-key-here'
 
 db.init_app(app)
 
-# login_required defined here so routes can import it
+# login_required (unchanged)
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):

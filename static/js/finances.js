@@ -3,13 +3,9 @@
 
     // CSRF Token for Flask
     function getCsrfToken() {
-        const metaToken = document.querySelector('meta[name="csrf-token"]');
-        if (metaToken) {
-            return metaToken.getAttribute('content');
-        }
-        const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-        return cookieMatch ? cookieMatch[1] : '';
-    }
+    
+    return '';
+}
 
     // Global state
     let currentTransactions = [];
