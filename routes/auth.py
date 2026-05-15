@@ -11,6 +11,12 @@ def login_page():
     return render_template('login.html')
 
 
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    return render_template('BarangayAdmin/dashboard.html')
+
+
 @app.route('/login', methods=['POST'])
 def login():
     user_email = request.form.get('user_email')

@@ -1,27 +1,18 @@
 from flask import Flask, session, flash, redirect, url_for, make_response
-from flask_sqlalchemy import SQLAlchemy
+from functools import wraps
+from extensions import db
 
 app = Flask(__name__)
 
-# Database configuration
+# Config
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost:3306/barangayprofiling'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 
-db = SQLAlchemy(app)
+db.init_app(app)
 
-
-@app.after_request
-def add_no_cache(response):
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '-1'
-    return response
-
-
+# login_required defined here so routes can import it
 def login_required(f):
-    from functools import wraps
-
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
@@ -30,13 +21,21 @@ def login_required(f):
             response.headers['Cache-Control'] = 'no-store'
             return response
         return f(*args, **kwargs)
-
     return decorated_function
 
+@app.after_request
+def add_no_cache(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 
-import models
-import routes
-
+# ── Import routes AFTER app and db are ready ──
+from routes.auth import *
+from routes.employee import *
+from routes.residence import *
+from routes.finance import *
+from routes.certificate import *
 
 if __name__ == '__main__':
     with app.app_context():
