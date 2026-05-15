@@ -321,3 +321,81 @@ def add_fiscal_year():
         flash(f'Error creating fiscal year: {str(e)}', 'danger')
 
     return redirect(url_for('finances'))
+
+@app.route('/finances/data')
+@login_required
+def finances_data():
+    """JSON endpoint for finances data"""
+    fiscal_year_id = request.args.get('fy')
+    
+    if fiscal_year_id:
+        transactions = Transaction.query.filter_by(fiscal_year_id=fiscal_year_id).order_by(
+            Transaction.transaction_date.desc(), Transaction.id.desc()
+        ).all()
+    else:
+        active_fy = FiscalYear.query.filter_by(status='active').first()
+        if active_fy:
+            transactions = Transaction.query.filter_by(fiscal_year_id=active_fy.id).order_by(
+                Transaction.transaction_date.desc(), Transaction.id.desc()
+            ).all()
+        else:
+            transactions = []
+
+    # Serialize data
+    tx_data = []
+    for t in transactions:
+        tx_data.append({
+            'id': t.id,
+            'transaction_date': t.transaction_date.isoformat(),
+            'transaction_description': t.transaction_description,
+            'transaction_amount': str(t.transaction_amount),
+            'transaction_running_balance': str(t.transaction_running_balance),
+            'transaction_docuNumber': t.transaction_docuNumber,
+            'transaction_type': {
+                'transaction_types': t.transaction_type.transaction_types
+            },
+            'document_type': {
+                'document_types': t.document_type.document_types
+            },
+            'category_type': {
+                'category_type': t.category_type.category_type
+            },
+            'transaction_status': {
+                'status_type': t.transaction_status.status_type
+            },
+            'is_deposited': t.is_deposited,
+            'deposited_date': t.deposited_date.isoformat() if t.deposited_date else None,
+            'fiscal_year_id': t.fiscal_year_id
+        })
+
+    return jsonify({
+        'transactions': tx_data,
+        'budget_allocations': [
+            {
+                'budget_amount': str(ba.budget_amount),
+                'category_type': {
+                    'category_type': ba.category_type.category_type
+                },
+                'budget_mandatory_percent': str(ba.budget_mandatory_percent) if ba.budget_mandatory_percent else None
+            }
+            for ba in budget_allocations
+        ]
+    })
+
+@app.route('/edit_transaction/<int:id>')
+@login_required
+def edit_transaction_json(id):
+    """JSON version for AJAX"""
+    transaction = Transaction.query.get_or_404(id)
+    return jsonify({
+        'id': transaction.id,
+        'fiscal_year_id': transaction.fiscal_year_id,
+        'transaction_type_id': transaction.transaction_type_id,
+        'transaction_category_id': transaction.transaction_category_id,
+        'transaction_status_id': transaction.transaction_status_id,
+        'transaction_date': transaction.transaction_date.isoformat(),
+        'transaction_amount': str(transaction.transaction_amount),
+        'transaction_description': transaction.transaction_description,
+        'is_deposited': transaction.is_deposited,
+        'deposited_date': transaction.deposited_date.isoformat() if transaction.deposited_date else None
+    })

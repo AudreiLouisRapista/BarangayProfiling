@@ -13,8 +13,11 @@
         </div>
         <div class="col-md-5 text-md-end d-flex gap-2 justify-content-md-end mt-3 mt-md-0">
             <select class="form-select form-select-sm" id="yearFilter" style="max-width:110px;">
-                <option value="2026" selected>FY 2026</option>
-                <option value="2025">FY 2025</option>
+                {% for fy in all_fiscal_years %}
+                <option value="{{ fy.id }}" {% if active_fiscal_year and fy.id == active_fiscal_year.id %}selected{% endif %}>
+                    FY {{ fy.fiscal_year }}
+                </option>
+                {% endfor %}
             </select>
             <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#transactionModal">
                 <i class="bi bi-plus-circle me-1"></i> New Transaction
@@ -25,16 +28,16 @@
         </div>
     </div>
 
-
-
     <!-- ── Summary KPI Cards ── -->
     <div class="row g-3 mb-4" id="kpiCards">
         <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <p class="small text-muted text-uppercase fw-bold mb-1" style="font-size:.72rem;letter-spacing:.6px;">Approved Budget</p>
-                    <h3 class="fw-bold mb-0 text-dark">₱ 1,250,000</h3>
-                    <span class="small text-muted">Appropriation Ordinance No. 2026-01</span>
+                    <h3 class="fw-bold mb-0 text-dark" id="approvedBudget">₱ {{ "%.2f"|format(active_fiscal_year.total_approved_budget|float) if active_fiscal_year else '0.00' }}</h3>
+                    {% if active_fiscal_year %}
+                    <span class="small text-muted">Appropriation Ordinance No. {{ active_fiscal_year.ordinance_number }}</span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -42,8 +45,8 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <p class="small text-muted text-uppercase fw-bold mb-1" style="font-size:.72rem;letter-spacing:.6px;">Total Collections (YTD)</p>
-                    <h3 class="fw-bold mb-0 text-success">₱ 487,320</h3>
-                    <span class="small text-success"><i class="bi bi-arrow-up-short"></i> 8.3% vs last year</span>
+                    <h3 class="fw-bold mb-0 text-success" id="totalCollectionsKPI">₱ {{ "%.2f"|format(total_collections) }}</h3>
+                    <span class="small text-success"><i class="bi bi-arrow-up-short"></i> Updated today</span>
                 </div>
             </div>
         </div>
@@ -51,8 +54,8 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <p class="small text-muted text-uppercase fw-bold mb-1" style="font-size:.72rem;letter-spacing:.6px;">Total Disbursements (YTD)</p>
-                    <h3 class="fw-bold mb-0 text-danger">₱ 312,150</h3>
-                    <span class="small text-muted">38 Disbursement Vouchers</span>
+                    <h3 class="fw-bold mb-0 text-danger" id="totalDisbursementsKPI">₱ {{ "%.2f"|format(total_disbursements) }}</h3>
+                    <span class="small text-muted" id="dvCount">{{ transactions|selectattr('transaction_type.transaction_types', 'equalto', 'Disbursement')|list|length }} DVs</span>
                 </div>
             </div>
         </div>
@@ -60,45 +63,35 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <p class="small text-muted text-uppercase fw-bold mb-1" style="font-size:.72rem;letter-spacing:.6px;">Current Cash Balance</p>
-                    <h3 class="fw-bold mb-0 text-primary">₱ 175,170</h3>
-                    <span class="small text-muted">As of today, deposited in LBP</span>
+                    <h3 class="fw-bold mb-0 text-primary" id="currentBalance">₱ {{ "%.2f"|format(current_balance) }}</h3>
+                    <span class="small text-muted">As of today</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ── Mandatory Allocations + Revenue vs Expense Chart ── -->
+    <!-- Budget allocations and charts will be populated by JS -->
     <div class="row g-4 mb-4">
-
-        <!-- Budget Allocation Breakdown -->
         <div class="col-md-5">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3 border-0">
                     <h6 class="fw-bold mb-0">
                         <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Budget Allocation Breakdown
                     </h6>
-                    <p class="small text-muted mb-0">Mandatory + discretionary allocations per Appropriation Ordinance</p>
+                    <p class="small text-muted mb-0">Mandatory + discretionary allocations</p>
                 </div>
                 <div class="card-body pt-0">
-                    <!-- Legend -->
                     <div class="d-flex flex-wrap gap-2 mb-3" id="allocLegend"></div>
                     <div style="position:relative; height:220px;">
-                        <canvas id="allocChart" role="img" aria-label="Doughnut chart showing budget allocation breakdown"></canvas>
+                        <canvas id="allocChart"></canvas>
                     </div>
-                    <!-- Mandatory badges -->
-                    <div class="mt-3 pt-3 border-top">
-                        <p class="small fw-bold text-muted text-uppercase mb-2" style="font-size:.7rem;letter-spacing:.6px;">Mandatory Allocations (RA 7160)</p>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <span class="badge rounded-pill" style="background:#e8f5e9;color:#2e7d32;font-size:.78rem;font-weight:500;">20% Development Fund — ₱ 250,000</span>
-                            <span class="badge rounded-pill" style="background:#fff3e0;color:#e65100;font-size:.78rem;font-weight:500;">10% SK Fund — ₱ 125,000</span>
-                            <span class="badge rounded-pill" style="background:#fce4ec;color:#880e4f;font-size:.78rem;font-weight:500;">5% Calamity Fund — ₱ 62,500</span>
-                        </div>
+                    <div class="mt-3 pt-3 border-top" id="mandatoryAllocations">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Monthly Revenue vs Expenses -->
         <div class="col-md-7">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
@@ -115,14 +108,14 @@
                 </div>
                 <div class="card-body pt-0">
                     <div style="position:relative; height:260px;">
-                        <canvas id="monthlyChart" role="img" aria-label="Bar chart showing monthly revenue and expenses for FY 2026"></canvas>
+                        <canvas id="monthlyChart"></canvas>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ── Cashbook / Transaction Ledger ── -->
+    <!-- Cashbook Table -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
@@ -144,6 +137,14 @@
                     <option value="February">February</option>
                     <option value="March">March</option>
                     <option value="April">April</option>
+                    <option value="May">May</option>
+                    <option value="June">June</option>
+                    <option value="July">July</option>
+                    <option value="August">August</option>
+                    <option value="September">September</option>
+                    <option value="October">October</option>
+                    <option value="November">November</option>
+                    <option value="December">December</option>
                 </select>
             </div>
         </div>
@@ -160,24 +161,63 @@
                             <th style="font-size:.78rem;letter-spacing:.5px;">Amount</th>
                             <th style="font-size:.78rem;letter-spacing:.5px;">Running Balance</th>
                             <th style="font-size:.78rem;letter-spacing:.5px;">Status</th>
+                            <th style="font-size:.78rem;letter-spacing:.5px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="cashbookBody">
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td class="ps-4 small text-muted">{{ transaction.transaction_date.strftime('%B %d, %Y') }}</td>
+                            <td class="small fw-semibold">{{ transaction.transaction_description }}</td>
+                            <td><span class="badge rounded-pill bg-light text-dark border" style="font-size:.72rem;">{{ transaction.category_type.category_type }}</span></td>
+                            <td class="small"><code>{{ transaction.document_type.document_types }}-{{ transaction.transaction_docuNumber.split('-')[-1] }}</code></td>
+                            <td><span class="badge rounded-pill 
+                                {%- if transaction.transaction_type.transaction_types == 'Collection' %}bg-success
+                                {%- else %}bg-danger{%- endif %} bg-opacity-10 border 
+                                {%- if transaction.transaction_type.transaction_types == 'Collection' %}border-success text-success
+                                {%- else %}border-danger text-danger{%- endif %}" style="font-size:.72rem;">
+                                {{ transaction.transaction_type.transaction_types }}
+                            </span></td>
+                            <td class="fw-bold 
+                                {%- if transaction.transaction_type.transaction_types == 'Collection' %}text-success
+                                {%- else %}text-danger{%- endif %}">
+                                {%- if transaction.transaction_type.transaction_types == 'Collection' %}+{%- endif -%}
+                                ₱ {{ "%.2f"|format(transaction.transaction_amount|float) }}
+                            </td>
+                            <td class="small text-muted">₱ {{ "%.2f"|format(transaction.transaction_running_balance|float) }}</td>
+                            <td><span class="badge rounded-pill 
+                                {%- if transaction.transaction_status.status_type in ['Deposited', 'Paid'] %}bg-success
+                                {%- elif transaction.transaction_status.status_type == 'Pending' %}bg-warning text-dark
+                                {%- else %}bg-secondary{%- endif %}" style="font-size:.7rem;">
+                                {{ transaction.transaction_status.status_type }}
+                            </span></td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-primary edit-btn" data-id="{{ transaction.id }}" data-bs-toggle="modal" data-bs-target="#transactionModal" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger delete-btn" data-id="{{ transaction.id }}" data-doc="{{ transaction.transaction_docuNumber }}" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
             <div class="px-4 py-3 border-top d-flex justify-content-between align-items-center">
-                <span class="small text-muted" id="rowCount"></span>
+                <span class="small text-muted" id="rowCount">{{ transactions|length }} transactions shown</span>
                 <div class="d-flex gap-2">
-                    <span class="small fw-bold text-success" id="totalCollections"></span>
+                    <span class="small fw-bold text-success" id="totalCollections">Collections: ₱ {{ "%.2f"|format(total_collections) }}</span>
                     <span class="text-muted small">|</span>
-                    <span class="small fw-bold text-danger" id="totalDisbursements"></span>
+                    <span class="small fw-bold text-danger" id="totalDisbursements">Disbursements: ₱ {{ "%.2f"|format(total_disbursements) }}</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ── Monthly Accountability Report Summary ── -->
+    <!-- Monthly Accountability Report (placeholder - would need backend data) -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white py-3 border-0">
             <h6 class="fw-bold mb-0">
@@ -201,7 +241,9 @@
                             <th style="font-size:.78rem;letter-spacing:.5px;"></th>
                         </tr>
                     </thead>
-                    <tbody id="marBody"></tbody>
+                    <tbody id="marBody">
+                        <tr><td colspan="9" class="text-center text-muted py-4">Monthly reports will be available soon</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -209,90 +251,125 @@
 
 </div>
 
-<!-- ── New Transaction Modal ── -->
+<!-- ── Transaction Modal ── -->
 <div class="modal fade" id="transactionModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content border-0 shadow">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">
-                    <i class="bi bi-plus-circle-fill me-2 text-success"></i>Record New Transaction
+                <h5 class="modal-title fw-bold" id="modalTitle">
+                    <i class="bi bi-plus-circle-fill me-2 text-success" id="modalIcon"></i>Record New Transaction
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Transaction Type</label>
-                    <select class="form-select" id="txType">
-                        <option value="Collection">Collection (Revenue / OR)</option>
-                        <option value="Disbursement">Disbursement (Expense / DV)</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Date</label>
-                    <input type="date" class="form-control" id="txDate">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Description</label>
-                    <input type="text" class="form-control" id="txDesc" placeholder="e.g. Barangay Clearance Fee">
-                </div>
-                <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <label class="form-label small fw-bold">Category</label>
-                        <select class="form-select" id="txCategory">
-                            <option>IRA</option>
-                            <option>Local Taxes</option>
-                            <option>Clearance Fees</option>
-                            <option>Permits & Licenses</option>
-                            <option>Salaries & Wages</option>
-                            <option>Utilities</option>
-                            <option>Social Services</option>
-                            <option>Development Projects</option>
-                            <option>SK Fund</option>
-                            <option>Calamity Fund</option>
-                            <option>Other</option>
+            <form id="transactionForm">
+                <input type="hidden" id="transaction_id" name="transaction_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Fiscal Year <span class="text-danger">*</span></label>
+                        <select class="form-select" id="fiscal_year_id" name="fiscal_year_id" required>
+                            {% for fy in all_fiscal_years %}
+                            <option value="{{ fy.id }}">FY {{ fy.fiscal_year }}</option>
+                            {% endfor %}
                         </select>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label small fw-bold">Amount (₱)</label>
-                        <input type="number" class="form-control" id="txAmount" placeholder="0.00" min="0">
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Document Type</label>
-                    <div class="input-group">
-                        <select class="form-select" id="txDocType" style="max-width:100px;">
-                            <option>OR</option>
-                            <option>DV</option>
-                            <option>PR</option>
-                            <option>JEV</option>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Transaction Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="transaction_type_id" name="transaction_type_id" required>
+                            {% for ttype in transaction_types %}
+                            <option value="{{ ttype.id }}">{{ ttype.transaction_types }}</option>
+                            {% endfor %}
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="transaction_date" name="transaction_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="transaction_description" name="transaction_description" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" id="transaction_category_id" name="transaction_category_id" required>
+                                {% for category in category_types %}
+                                <option value="{{ category.id }}">{{ category.category_type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Amount (₱) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="transaction_amount" name="transaction_amount" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Status <span class="text-danger">*</span></label>
+                            <select class="form-select" id="transaction_status_id" name="transaction_status_id" required>
+                                {% for status in transaction_statuses %}
+                                <option value="{{ status.id }}">{{ status.status_type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Deposited?</label>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="is_deposited" name="is_deposited">
+                                <label class="form-check-label small" for="is_deposited">
+                                    Mark as deposited
+                                </label>
+                            </div>
+                            <input type="date" class="form-control mt-1" id="deposited_date" name="deposited_date">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Remarks (optional)</label>
+                        <textarea class="form-control" id="remarks" name="transaction_description" rows="2"></textarea>
+                    </div>
                 </div>
-                <div class="mb-1">
-                    <label class="form-label small fw-bold">Remarks (optional)</label>
-                    <textarea class="form-control" id="txRemarks" rows="2" placeholder="e.g. Approved per Resolution No. 2026-04"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-success" id="saveTransaction">
-                    <i class="bi bi-check-circle me-1"></i> Save Transaction
-                </button>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="saveTransaction">
+                        <i class="bi bi-check-circle me-1"></i> <span id="saveBtnText">Save Transaction</span>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <script>
+                setTimeout(() => {
+                    const toast = document.createElement('div');
+                    toast.className = `toast align-items-center text-white bg-${category === 'success' ? 'success' : category === 'danger' ? 'danger' : 'warning'} border-0`;
+                    toast.role = 'alert';
+                    toast.innerHTML = `
+                        <div class="d-flex">
+                            <div class="toast-body">${message}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    const bsToast = new bootstrap.Toast(toast);
+                    bsToast.show();
+                    toast.addEventListener('hidden.bs.toast', () => toast.remove());
+                }, 500);
+            </script>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
 
 {% endblock %}
 
 {% block scripts %}
-    <script src="{{ url_for('static', filename='js/finances.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
+<script src="{{ url_for('static', filename='js/finances.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 {% endblock %}
 
 {% block head %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/finances.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/finances.css') }}">
 {% endblock %}
-
