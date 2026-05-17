@@ -67,7 +67,7 @@ def finances():
     if fy_id:
         active_fiscal_year = FiscalYear.query.get(fy_id)
     else:
-        active_fiscal_year = FiscalYear.query.filter_by(status='active').first()
+        active_fiscal_year = FiscalYear.query.filter_by(fiscal_status_id=2).first()
 
     transactions        = []
     budget_allocations  = []
@@ -195,11 +195,11 @@ def add_transaction():
         # Generate document number
         doc_number = generate_doc_number(doc_type_label, fiscal_year.fiscal_year)
 
-        # Use session user_id as admin_id
-        admin_id = session.get('user_id')
+        # Use session user_id as user_id for transaction
+        user_id = session.get('user_id')
 
         new_transaction = Transaction(
-            admin_id                    = admin_id,
+            user_id                    = user_id,
             transaction_type_id         = transaction_type_id,
             transaction_docuType_id     = doc_type.id,
             transaction_category_id     = transaction_category_id,
@@ -317,14 +317,15 @@ def add_fiscal_year():
             return redirect(url_for('finances'))
 
         # Close all currently active fiscal years
-        FiscalYear.query.filter_by(status='active').update({'status': 'closed'})
+        FiscalYear.query.filter_by(fiscal_status_id=2).update({'fiscal_status_id': 3},synchronize_session=False)
+        db.session.commit()
 
         new_fy = FiscalYear(
             fiscal_year           = fiscal_year,
             total_approved_budget = approved_budget,
             ordinance_number      = ordinance_number,
             ordinance_date        = ordinance_date,
-            status                = 'active',
+            fiscal_status_id      = 2,  # Assuming 2 represents 'active' status
         )
         db.session.add(new_fy)
         db.session.commit()
@@ -334,5 +335,54 @@ def add_fiscal_year():
     except Exception as e:
         db.session.rollback()
         flash(f'Error creating fiscal year: {str(e)}', 'danger')
+
+    return redirect(url_for('finances'))
+
+
+# ── Save Budget Allocation ────────────────────────────────────────────────────
+
+@app.route('/budget_allocation/save', methods=['POST'])
+@login_required
+def save_budget_allocation():
+    try:
+        fiscal_year_id = request.form.get('fiscal_year_id')
+
+        if not fiscal_year_id:
+            flash('No active fiscal year found.', 'warning')
+            return redirect(url_for('finances'))
+
+        # Get all category types
+        categories = CategoryType.query.all()
+
+        for ct in categories:
+            amount   = request.form.get(f'amount_{ct.id}', 0)
+            percent  = request.form.get(f'mandatory_percent_{ct.id}') or None
+
+            # Check if allocation already exists for this category + fiscal year
+            existing = BudgetAllocation.query.filter_by(
+                fiscal_year_id          = fiscal_year_id,
+                transaction_category_id = ct.id
+            ).first()
+
+            if existing:
+                # Update existing
+                existing.budget_amount            = amount
+                existing.budget_mandatory_percent = percent
+            else:
+                # Insert new
+                new_alloc = BudgetAllocation(
+                    fiscal_year_id          = fiscal_year_id,
+                    transaction_category_id = ct.id,
+                    budget_amount           = amount,
+                    budget_mandatory_percent = percent,
+                )
+                db.session.add(new_alloc)
+
+        db.session.commit()
+        flash('Budget allocations saved successfully.', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error saving allocations: {str(e)}', 'danger')
 
     return redirect(url_for('finances'))

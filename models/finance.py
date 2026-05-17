@@ -39,7 +39,7 @@ class CategoryType(db.Model):
 
     id              = db.Column(db.Integer, primary_key=True)
     category_type   = db.Column(db.String(50), nullable=False, unique=True)
-    type_nature     = db.Column(db.String(10), nullable=False)   # 'income' or 'expense'
+    #type_nature     = db.Column(db.String(10), nullable=False)   # 'income' or 'expense'
 
     # Relationships
     transactions       = db.relationship('Transaction', backref='category_type', lazy=True)
@@ -74,8 +74,8 @@ class FiscalYear(db.Model):
     total_approved_budget   = db.Column(db.Numeric(15, 2), nullable=False, default=0.00)
     ordinance_number        = db.Column(db.String(100), nullable=False)             # e.g. 'Ordinance No. 2026-01'
     ordinance_date          = db.Column(db.Date, nullable=False)
-    status                  = db.Column(db.String(20), nullable=False, default='active')  # 'draft', 'active', 'closed'
 
+    fiscal_status_id = db.Column(db.Integer, db.ForeignKey('fiscal_status.id'), nullable=False, default=2)
     # Relationships
     transactions       = db.relationship('Transaction', backref='fiscal_year', lazy=True)
     budget_allocations = db.relationship('BudgetAllocation', backref='fiscal_year', lazy=True)
@@ -83,6 +83,18 @@ class FiscalYear(db.Model):
     def __repr__(self):
         return f'<FiscalYear {self.fiscal_year} — {self.status}>'
 
+# ── Fiscal Status ───────────────────────────────────────────────────────────
+class FiscalStatus(db.Model):
+    __tablename__ = 'fiscal_status'
+
+    id              = db.Column(db.Integer, primary_key=True)
+    fiscal_type     = db.Column(db.String(50), nullable=False, unique=True)  # e.g. 'Open', 'Closed', 'Pending'
+
+    # Relationship
+    fiscal_years = db.relationship('FiscalYear', backref='status', lazy=True)
+
+    def __repr__(self):
+        return f'<FiscalStatus {self.status_name}>'
 
 # ── Budget Allocation ─────────────────────────────────────────────────────────
 
@@ -106,7 +118,7 @@ class Transaction(db.Model):
     __tablename__ = 'transaction'
 
     id                          = db.Column(db.Integer, primary_key=True)
-    admin_id                    = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=False)
+    user_id                    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     transaction_type_id         = db.Column(db.Integer, db.ForeignKey('transaction_type.id'), nullable=False)
     transaction_docuType_id     = db.Column(db.Integer, db.ForeignKey('document_type.id'), nullable=False)
     transaction_category_id     = db.Column(db.Integer, db.ForeignKey('category_type.id'), nullable=False)
