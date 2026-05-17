@@ -1,5 +1,9 @@
 {% extends "BarangayAdmin/sidebar.html" %}
 
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/finances.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid pt-4 pb-5">
 
@@ -9,35 +13,69 @@
             <h2 class="fw-bold mb-1">
                 <i class="bi bi-bank me-2 text-success"></i>Financial Management
             </h2>
-            <p class="text-muted mb-0">Cashbook, and monthly accountability reports.</p>
+            <p class="text-muted mb-0">Cashbook and budget accountability reports.</p>
         </div>
         <div class="col-md-5 text-md-end d-flex gap-2 justify-content-md-end mt-3 mt-md-0">
-            <select class="form-select form-select-sm" id="yearFilter" style="max-width:110px;">
-                {% for fy in all_fiscal_years %}
-                <option value="{{ fy.id }}" {% if active_fiscal_year and fy.id == active_fiscal_year.id %}selected{% endif %}>
-                    FY {{ fy.fiscal_year }}
-                </option>
-                {% endfor %}
-            </select>
+
+            <!-- Fiscal Year Filter -->
+            <form method="GET" action="{{ url_for('finances') }}" class="d-flex gap-2">
+                <select class="form-select form-select-sm" name="fy" style="max-width:120px;"
+                        onchange="this.form.submit()">
+                    {% for fy in all_fiscal_years %}
+                    <option value="{{ fy.id }}"
+                        {% if active_fiscal_year and fy.id == active_fiscal_year.id %}selected{% endif %}>
+                        FY {{ fy.fiscal_year }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+
             <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#transactionModal">
                 <i class="bi bi-plus-circle me-1"></i> New Transaction
             </button>
-            <button class="btn btn-outline-dark btn-sm">
-                <i class="bi bi-printer me-1"></i> Print Report
+            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#fiscalYearModal">
+                <i class="bi bi-calendar-plus me-1"></i> New Fiscal Year
+            </button>
+            <button class="btn btn-outline-dark btn-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Print
             </button>
         </div>
     </div>
 
-    <!-- ── Summary KPI Cards ── -->
-    <div class="row g-3 mb-4" id="kpiCards">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show py-2 small border-0" role="alert">
+                    <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }}-fill me-1"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if not active_fiscal_year %}
+    <!-- No Fiscal Year Warning -->
+    <div class="alert alert-warning border-0 shadow-sm">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        No active fiscal year found. Please create a fiscal year first before recording transactions.
+        <button class="btn btn-warning btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#fiscalYearModal">
+            Create Fiscal Year
+        </button>
+    </div>
+    {% else %}
+
+    <!-- ── KPI Cards ── -->
+    <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <p class="small text-muted text-uppercase fw-bold mb-1" style="font-size:.72rem;letter-spacing:.6px;">Approved Budget</p>
-                    <h3 class="fw-bold mb-0 text-dark" id="approvedBudget">₱ {{ "%.2f"|format(active_fiscal_year.total_approved_budget|float) if active_fiscal_year else '0.00' }}</h3>
-                    {% if active_fiscal_year %}
-                    <span class="small text-muted">Appropriation Ordinance No. {{ active_fiscal_year.ordinance_number }}</span>
-                    {% endif %}
+                    <h3 class="fw-bold mb-0 text-dark">
+                        ₱ {{ '{:,.2f}'.format(active_fiscal_year.total_approved_budget) }}
+                    </h3>
+                    <span class="small text-muted">{{ active_fiscal_year.ordinance_number }}</span>
                 </div>
             </div>
         </div>
@@ -45,8 +83,10 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <p class="small text-muted text-uppercase fw-bold mb-1" style="font-size:.72rem;letter-spacing:.6px;">Total Collections (YTD)</p>
-                    <h3 class="fw-bold mb-0 text-success" id="totalCollectionsKPI">₱ {{ "%.2f"|format(total_collections) }}</h3>
-                    <span class="small text-success"><i class="bi bi-arrow-up-short"></i> Updated today</span>
+                    <h3 class="fw-bold mb-0 text-success">
+                        ₱ {{ '{:,.2f}'.format(total_collections) }}
+                    </h3>
+                    <span class="small text-muted">Year-to-date collections</span>
                 </div>
             </div>
         </div>
@@ -54,8 +94,10 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <p class="small text-muted text-uppercase fw-bold mb-1" style="font-size:.72rem;letter-spacing:.6px;">Total Disbursements (YTD)</p>
-                    <h3 class="fw-bold mb-0 text-danger" id="totalDisbursementsKPI">₱ {{ "%.2f"|format(total_disbursements) }}</h3>
-                    <span class="small text-muted" id="dvCount">{{ transactions|selectattr('transaction_type.transaction_types', 'equalto', 'Disbursement')|list|length }} DVs</span>
+                    <h3 class="fw-bold mb-0 text-danger">
+                        ₱ {{ '{:,.2f}'.format(total_disbursements) }}
+                    </h3>
+                    <span class="small text-muted">Year-to-date disbursements</span>
                 </div>
             </div>
         </div>
@@ -63,35 +105,51 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <p class="small text-muted text-uppercase fw-bold mb-1" style="font-size:.72rem;letter-spacing:.6px;">Current Cash Balance</p>
-                    <h3 class="fw-bold mb-0 text-primary" id="currentBalance">₱ {{ "%.2f"|format(current_balance) }}</h3>
-                    <span class="small text-muted">As of today</span>
+                    <h3 class="fw-bold mb-0 text-primary">
+                        ₱ {{ '{:,.2f}'.format(current_balance) }}
+                    </h3>
+                    <span class="small text-muted">FY {{ active_fiscal_year.fiscal_year }}</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Budget allocations and charts will be populated by JS -->
+    <!-- ── Charts Row ── -->
     <div class="row g-4 mb-4">
+
+        <!-- Budget Allocation Doughnut -->
         <div class="col-md-5">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3 border-0">
                     <h6 class="fw-bold mb-0">
                         <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Budget Allocation Breakdown
                     </h6>
-                    <p class="small text-muted mb-0">Mandatory + discretionary allocations</p>
+                    <p class="small text-muted mb-0">Allocations per Appropriation Ordinance</p>
                 </div>
                 <div class="card-body pt-0">
                     <div class="d-flex flex-wrap gap-2 mb-3" id="allocLegend"></div>
                     <div style="position:relative; height:220px;">
                         <canvas id="allocChart"></canvas>
                     </div>
-                    <div class="mt-3 pt-3 border-top" id="mandatoryAllocations">
-                        <!-- Populated by JS -->
+                    {% set mandatory = budget_allocations | selectattr('budget_mandatory_percent') | list %}
+                    {% if mandatory %}
+                    <div class="mt-3 pt-3 border-top">
+                        <p class="small fw-bold text-muted text-uppercase mb-2" style="font-size:.7rem;letter-spacing:.6px;">Mandatory Allocations (RA 7160)</p>
+                        <div class="d-flex gap-2 flex-wrap">
+                            {% for alloc in mandatory %}
+                            <span class="badge rounded-pill bg-light text-dark border" style="font-size:.75rem;">
+                                {{ alloc.budget_mandatory_percent }}% {{ alloc.category_type.category_type }} —
+                                ₱ {{ '{:,.0f}'.format(alloc.budget_amount) }}
+                            </span>
+                            {% endfor %}
+                        </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
+        <!-- Monthly Bar Chart -->
         <div class="col-md-7">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
@@ -99,7 +157,7 @@
                         <h6 class="fw-bold mb-0">
                             <i class="bi bi-bar-chart-fill me-2 text-success"></i>Monthly Revenue vs. Expenses
                         </h6>
-                        <p class="small text-muted mb-0">Collections and disbursements per month</p>
+                        <p class="small text-muted mb-0">FY {{ active_fiscal_year.fiscal_year }}</p>
                     </div>
                     <div class="d-flex gap-3 small">
                         <span><span class="d-inline-block rounded me-1" style="width:10px;height:10px;background:#198754;"></span>Revenue</span>
@@ -115,36 +173,37 @@
         </div>
     </div>
 
-    <!-- Cashbook Table -->
+    <!-- ── Cashbook Table ── -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
                 <h6 class="fw-bold mb-0">
                     <i class="bi bi-journal-text me-2 text-dark"></i>Cashbook — Daily Transaction Register
                 </h6>
-                <p class="small text-muted mb-0">All collections and disbursements with supporting document references</p>
+                <p class="small text-muted mb-0">All collections and disbursements with document references</p>
             </div>
             <div class="d-flex gap-2 flex-wrap align-items-center">
-                <input type="text" class="form-control form-control-sm" id="cashbookSearch" placeholder="Search transactions…" style="max-width:200px;">
-                <select class="form-select form-select-sm" id="typeFilter" style="max-width:130px;">
+                <input type="text" class="form-control form-control-sm" id="cashbookSearch"
+                       placeholder="Search…" style="max-width:200px;">
+                <select class="form-select form-select-sm" id="typeFilter" style="max-width:140px;">
                     <option value="">All Types</option>
                     <option value="Collection">Collection</option>
                     <option value="Disbursement">Disbursement</option>
                 </select>
                 <select class="form-select form-select-sm" id="monthFilter" style="max-width:130px;">
                     <option value="">All Months</option>
-                    <option value="January">January</option>
-                    <option value="February">February</option>
-                    <option value="March">March</option>
-                    <option value="April">April</option>
-                    <option value="May">May</option>
-                    <option value="June">June</option>
-                    <option value="July">July</option>
-                    <option value="August">August</option>
-                    <option value="September">September</option>
-                    <option value="October">October</option>
-                    <option value="November">November</option>
-                    <option value="December">December</option>
+                    <option value="01">January</option>
+                    <option value="02">February</option>
+                    <option value="03">March</option>
+                    <option value="04">April</option>
+                    <option value="05">May</option>
+                    <option value="06">June</option>
+                    <option value="07">July</option>
+                    <option value="08">August</option>
+                    <option value="09">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
                 </select>
             </div>
         </div>
@@ -165,41 +224,58 @@
                         </tr>
                     </thead>
                     <tbody id="cashbookBody">
-                        {% for transaction in transactions %}
-                        <tr>
-                            <td class="ps-4 small text-muted">{{ transaction.transaction_date.strftime('%B %d, %Y') }}</td>
-                            <td class="small fw-semibold">{{ transaction.transaction_description }}</td>
-                            <td><span class="badge rounded-pill bg-light text-dark border" style="font-size:.72rem;">{{ transaction.category_type.category_type }}</span></td>
-                            <td class="small"><code>{{ transaction.document_type.document_types }}-{{ transaction.transaction_docuNumber.split('-')[-1] }}</code></td>
-                            <td><span class="badge rounded-pill 
-                                {%- if transaction.transaction_type.transaction_types == 'Collection' %}bg-success
-                                {%- else %}bg-danger{%- endif %} bg-opacity-10 border 
-                                {%- if transaction.transaction_type.transaction_types == 'Collection' %}border-success text-success
-                                {%- else %}border-danger text-danger{%- endif %}" style="font-size:.72rem;">
-                                {{ transaction.transaction_type.transaction_types }}
-                            </span></td>
-                            <td class="fw-bold 
-                                {%- if transaction.transaction_type.transaction_types == 'Collection' %}text-success
-                                {%- else %}text-danger{%- endif %}">
-                                {%- if transaction.transaction_type.transaction_types == 'Collection' %}+{%- endif -%}
-                                ₱ {{ "%.2f"|format(transaction.transaction_amount|float) }}
-                            </td>
-                            <td class="small text-muted">₱ {{ "%.2f"|format(transaction.transaction_running_balance|float) }}</td>
-                            <td><span class="badge rounded-pill 
-                                {%- if transaction.transaction_status.status_type in ['Deposited', 'Paid'] %}bg-success
-                                {%- elif transaction.transaction_status.status_type == 'Pending' %}bg-warning text-dark
-                                {%- else %}bg-secondary{%- endif %}" style="font-size:.7rem;">
-                                {{ transaction.transaction_status.status_type }}
-                            </span></td>
+                        {% for t in transactions %}
+                        <tr data-type="{{ t.transaction_type.transaction_types }}"
+                            data-month="{{ t.transaction_date.strftime('%m') }}"
+                            data-search="{{ t.transaction_description | lower }} {{ t.category_type.category_type | lower }} {{ t.transaction_docuNumber | lower }}">
+                            <td class="ps-4 small text-muted">{{ t.transaction_date.strftime('%B %d, %Y') }}</td>
+                            <td class="small fw-semibold">{{ t.transaction_description }}</td>
                             <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button class="btn btn-outline-primary edit-btn" data-id="{{ transaction.id }}" data-bs-toggle="modal" data-bs-target="#transactionModal" title="Edit">
+                                <span class="badge rounded-pill bg-light text-dark border" style="font-size:.72rem;">
+                                    {{ t.category_type.category_type }}
+                                </span>
+                            </td>
+                            <td class="small"><code>{{ t.transaction_docuNumber }}</code></td>
+                            <td>
+                                {% if t.transaction_type.transaction_types == 'Collection' %}
+                                <span class="badge rounded-pill bg-success bg-opacity-10 border border-success text-success" style="font-size:.72rem;">Collection</span>
+                                {% else %}
+                                <span class="badge rounded-pill bg-danger bg-opacity-10 border border-danger text-danger" style="font-size:.72rem;">Disbursement</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold {{ 'text-success' if t.transaction_type.transaction_types == 'Collection' else 'text-danger' }}">
+                                {{ '+' if t.transaction_type.transaction_types == 'Collection' else '-' }}
+                                ₱ {{ '{:,.2f}'.format(t.transaction_amount) }}
+                            </td>
+                            <td class="small text-muted">₱ {{ '{:,.2f}'.format(t.transaction_running_balance) }}</td>
+                            <td>
+                                {% if t.transaction_status.status_type in ['Deposited', 'Paid'] %}
+                                <span class="badge rounded-pill bg-success" style="font-size:.7rem;">{{ t.transaction_status.status_type }}</span>
+                                {% elif t.transaction_status.status_type == 'Pending' %}
+                                <span class="badge rounded-pill bg-warning text-dark" style="font-size:.7rem;">Pending</span>
+                                {% else %}
+                                <span class="badge rounded-pill bg-secondary" style="font-size:.7rem;">{{ t.transaction_status.status_type }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <a href="{{ url_for('edit_transaction', id=t.id) }}"
+                                       class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
                                         <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger delete-btn" data-id="{{ transaction.id }}" data-doc="{{ transaction.transaction_docuNumber }}" title="Delete">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    </a>
+                                    <form action="{{ url_for('delete_transaction', id=t.id) }}" method="POST"
+                                          onsubmit="return confirm('Delete transaction {{ t.transaction_docuNumber }}?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:.75rem;">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
                                 </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4 small">
+                                <i class="bi bi-inbox me-2"></i>No transactions recorded yet.
                             </td>
                         </tr>
                         {% endfor %}
@@ -207,169 +283,305 @@
                 </table>
             </div>
             <div class="px-4 py-3 border-top d-flex justify-content-between align-items-center">
-                <span class="small text-muted" id="rowCount">{{ transactions|length }} transactions shown</span>
+                <span class="small text-muted" id="rowCount">
+                    {{ transactions | length }} transaction(s)
+                </span>
                 <div class="d-flex gap-2">
-                    <span class="small fw-bold text-success" id="totalCollections">Collections: ₱ {{ "%.2f"|format(total_collections) }}</span>
+                    <span class="small fw-bold text-success">
+                        Collections: ₱ {{ '{:,.2f}'.format(total_collections) }}
+                    </span>
                     <span class="text-muted small">|</span>
-                    <span class="small fw-bold text-danger" id="totalDisbursements">Disbursements: ₱ {{ "%.2f"|format(total_disbursements) }}</span>
+                    <span class="small fw-bold text-danger">
+                        Disbursements: ₱ {{ '{:,.2f}'.format(total_disbursements) }}
+                    </span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Monthly Accountability Report (placeholder - would need backend data) -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white py-3 border-0">
-            <h6 class="fw-bold mb-0">
-                <i class="bi bi-file-earmark-bar-graph me-2 text-warning"></i>Monthly Accountability Report (MAR)
-            </h6>
-            <p class="small text-muted mb-0">Summary submitted to the City/Municipal Accountant each month</p>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4" style="font-size:.78rem;letter-spacing:.5px;">Month</th>
-                            <th style="font-size:.78rem;letter-spacing:.5px;">Collections</th>
-                            <th style="font-size:.78rem;letter-spacing:.5px;">Disbursements</th>
-                            <th style="font-size:.78rem;letter-spacing:.5px;">Net</th>
-                            <th style="font-size:.78rem;letter-spacing:.5px;">DVs Issued</th>
-                            <th style="font-size:.78rem;letter-spacing:.5px;">ORs Issued</th>
-                            <th style="font-size:.78rem;letter-spacing:.5px;">Submitted to Accountant</th>
-                            <th style="font-size:.78rem;letter-spacing:.5px;">Status</th>
-                            <th style="font-size:.78rem;letter-spacing:.5px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="marBody">
-                        <tr><td colspan="9" class="text-center text-muted py-4">Monthly reports will be available soon</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
+    {% endif %} {# end active_fiscal_year check #}
 </div>
 
-<!-- ── Transaction Modal ── -->
+<!-- ── New Transaction Modal ── -->
 <div class="modal fade" id="transactionModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content border-0 shadow">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="modalTitle">
-                    <i class="bi bi-plus-circle-fill me-2 text-success" id="modalIcon"></i>Record New Transaction
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-plus-circle-fill me-2 text-success"></i>Record New Transaction
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="transactionForm">
-                <input type="hidden" id="transaction_id" name="transaction_id">
+            <form action="{{ url_for('add_transaction') }}" method="POST">
                 <div class="modal-body">
+
+                    <!-- Fiscal Year (hidden, uses active) -->
+                    <input type="hidden" name="fiscal_year_id"
+                           value="{{ active_fiscal_year.id if active_fiscal_year else '' }}">
+
+                    <!-- Transaction Type -->
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Fiscal Year <span class="text-danger">*</span></label>
-                        <select class="form-select" id="fiscal_year_id" name="fiscal_year_id" required>
-                            {% for fy in all_fiscal_years %}
-                            <option value="{{ fy.id }}">FY {{ fy.fiscal_year }}</option>
+                        <label class="form-label small fw-bold">Transaction Type</label>
+                        <select class="form-select" name="transaction_type_id" id="txTypeSelect" required>
+                            <option value="" disabled selected>Select type...</option>
+                            {% for tt in transaction_types %}
+                            <option value="{{ tt.id }}">{{ tt.transaction_types }}</option>
                             {% endfor %}
                         </select>
                     </div>
+
+                    <!-- Date -->
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Transaction Type <span class="text-danger">*</span></label>
-                        <select class="form-select" id="transaction_type_id" name="transaction_type_id" required>
-                            {% for ttype in transaction_types %}
-                            <option value="{{ ttype.id }}">{{ ttype.transaction_types }}</option>
-                            {% endfor %}
-                        </select>
+                        <label class="form-label small fw-bold">Date</label>
+                        <input type="date" class="form-control" name="transaction_date" required>
                     </div>
+
+                    <!-- Description -->
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Date <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="transaction_date" name="transaction_date" required>
+                        <label class="form-label small fw-bold">Description</label>
+                        <input type="text" class="form-control" name="transaction_description"
+                               placeholder="e.g. Barangay Clearance Fee" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Description <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="transaction_description" name="transaction_description" required>
-                    </div>
+
+                    <!-- Category + Amount -->
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label small fw-bold">Category <span class="text-danger">*</span></label>
-                            <select class="form-select" id="transaction_category_id" name="transaction_category_id" required>
-                                {% for category in category_types %}
-                                <option value="{{ category.id }}">{{ category.category_type }}</option>
+                            <label class="form-label small fw-bold">Category</label>
+                            <select class="form-select" name="transaction_category_id" required>
+                                <option value="" disabled selected>Select category...</option>
+                                {% for ct in category_types %}
+                                <option value="{{ ct.id }}">{{ ct.category_type }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-6">
-                            <label class="form-label small fw-bold">Amount (₱) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="transaction_amount" name="transaction_amount" step="0.01" min="0" required>
+                            <label class="form-label small fw-bold">Amount (₱)</label>
+                            <input type="number" class="form-control" name="transaction_amount"
+                                   placeholder="0.00" min="0" step="0.01" required>
                         </div>
                     </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Status <span class="text-danger">*</span></label>
-                            <select class="form-select" id="transaction_status_id" name="transaction_status_id" required>
-                                {% for status in transaction_statuses %}
-                                <option value="{{ status.id }}">{{ status.status_type }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Deposited?</label>
-                            <div class="form-check mt-2">
-                                <input class="form-check-input" type="checkbox" id="is_deposited" name="is_deposited">
-                                <label class="form-check-label small" for="is_deposited">
-                                    Mark as deposited
-                                </label>
+
+                    <!-- Status -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Status</label>
+                        <select class="form-select" name="transaction_status_id" required>
+                            <option value="" disabled selected>Select status...</option>
+                            {% for ts in transaction_statuses %}
+                            <option value="{{ ts.id }}">{{ ts.status_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Deposit fields (shown only for Collection) -->
+                    <div id="depositFields" class="d-none">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="is_deposited" id="isDeposited" value="1">
+                                    <label class="form-check-label small fw-bold" for="isDeposited">
+                                        Deposited to Bank?
+                                    </label>
+                                </div>
                             </div>
-                            <input type="date" class="form-control mt-1" id="deposited_date" name="deposited_date">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Deposit Date</label>
+                                <input type="date" class="form-control" name="deposited_date">
+                            </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Remarks (optional)</label>
-                        <textarea class="form-control" id="remarks" name="transaction_description" rows="2"></textarea>
+
+                    <!-- Remarks -->
+                    <div class="mb-1">
+                        <label class="form-label small fw-bold">Remarks <span class="text-muted fw-normal">(optional)</span></label>
+                        <textarea class="form-control" name="transaction_description_remarks" rows="2"
+                                  placeholder="e.g. Approved per Resolution No. 2026-04"></textarea>
                     </div>
+
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success" id="saveTransaction">
-                        <i class="bi bi-check-circle me-1"></i> <span id="saveBtnText">Save Transaction</span>
+                    <button type="submit" class="btn btn-success" {% if not active_fiscal_year %}disabled{% endif %}>
+                        <i class="bi bi-check-circle me-1"></i> Save Transaction
                     </button>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- Flash Messages -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <script>
-                setTimeout(() => {
-                    const toast = document.createElement('div');
-                    toast.className = `toast align-items-center text-white bg-${category === 'success' ? 'success' : category === 'danger' ? 'danger' : 'warning'} border-0`;
-                    toast.role = 'alert';
-                    toast.innerHTML = `
-                        <div class="d-flex">
-                            <div class="toast-body">${message}</div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+<!-- ── Edit Transaction Modal ── -->
+{% if edit_transaction %}
+<div class="modal fade" id="editTransactionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-pencil-fill me-2 text-primary"></i>Edit Transaction
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('update_transaction') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="transaction_id" value="{{ edit_transaction.id }}">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Document Reference</label>
+                        <input type="text" class="form-control"
+                               value="{{ edit_transaction.transaction_docuNumber }}" disabled>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Transaction Type</label>
+                        <select class="form-select" name="transaction_type_id" required>
+                            {% for tt in transaction_types %}
+                            <option value="{{ tt.id }}"
+                                {% if tt.id == edit_transaction.transaction_type_id %}selected{% endif %}>
+                                {{ tt.transaction_types }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Date</label>
+                        <input type="date" class="form-control" name="transaction_date"
+                               value="{{ edit_transaction.transaction_date }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description</label>
+                        <input type="text" class="form-control" name="transaction_description"
+                               value="{{ edit_transaction.transaction_description }}" required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Category</label>
+                            <select class="form-select" name="transaction_category_id" required>
+                                {% for ct in category_types %}
+                                <option value="{{ ct.id }}"
+                                    {% if ct.id == edit_transaction.transaction_category_id %}selected{% endif %}>
+                                    {{ ct.category_type }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
-                    `;
-                    document.body.appendChild(toast);
-                    const bsToast = new bootstrap.Toast(toast);
-                    bsToast.show();
-                    toast.addEventListener('hidden.bs.toast', () => toast.remove());
-                }, 500);
-            </script>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Amount (₱)</label>
+                            <input type="number" class="form-control" name="transaction_amount"
+                                   value="{{ edit_transaction.transaction_amount }}"
+                                   min="0" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Status</label>
+                        <select class="form-select" name="transaction_status_id" required>
+                            {% for ts in transaction_statuses %}
+                            <option value="{{ ts.id }}"
+                                {% if ts.id == edit_transaction.transaction_status_id %}selected{% endif %}>
+                                {{ ts.status_type }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" name="is_deposited"
+                                       id="editIsDeposited" value="1"
+                                       {% if edit_transaction.is_deposited %}checked{% endif %}>
+                                <label class="form-check-label small fw-bold" for="editIsDeposited">
+                                    Deposited to Bank?
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Deposit Date</label>
+                            <input type="date" class="form-control" name="deposited_date"
+                                   value="{{ edit_transaction.deposited_date or '' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i> Update Transaction
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ── New Fiscal Year Modal ── -->
+<div class="modal fade" id="fiscalYearModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-calendar-plus-fill me-2 text-secondary"></i>Create New Fiscal Year
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('add_fiscal_year') }}" method="POST">
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 small border-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Creating a new fiscal year will automatically close the current active year.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Fiscal Year</label>
+                        <input type="text" class="form-control" name="fiscal_year"
+                               placeholder="e.g. 2027" maxlength="4" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Total Approved Budget (₱)</label>
+                        <input type="number" class="form-control" name="total_approved_budget"
+                               placeholder="0.00" min="0" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Ordinance Number</label>
+                        <input type="text" class="form-control" name="ordinance_number"
+                               placeholder="e.g. Ordinance No. 2027-01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Ordinance Date</label>
+                        <input type="date" class="form-control" name="ordinance_date" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-secondary">
+                        <i class="bi bi-check-circle me-1"></i> Create Fiscal Year
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/finances.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-{% endblock %}
+<script>
+    // Pass Flask data to JS
+    const budgetAllocations = JSON.parse(`{{ (budget_allocations | default([]) | map(attribute='category_type') | map(attribute='category_type') | list) | tojson | safe }}`);
+    const budgetAmounts     = JSON.parse(`{{ (budget_allocations | default([]) | map(attribute='budget_amount') | list) | tojson | safe }}`);
+    const monthlyData       = JSON.parse(`{{ (monthly_chart_data | default({'revenue':[0,0,0,0,0,0,0,0,0,0,0,0],'expenses':[0,0,0,0,0,0,0,0,0,0,0,0]})) | tojson | safe }}`);
+</script>
+<script src="{{ url_for('static', filename='js/finances.js') }}"></script>
 
-{% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/finances.css') }}">
+{% if edit_transaction %}
+<script>
+    // Auto-open edit modal if edit_transaction is set
+    document.addEventListener('DOMContentLoaded', () => {
+        new bootstrap.Modal(document.getElementById('editTransactionModal')).show();
+    });
+</script>
+{% endif %}
 {% endblock %}

@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
-from flask import render_template, request, redirect, url_for, flash, session, jsonify
+from flask import render_template, request, redirect, url_for, flash, session
+from sqlalchemy import func
 from app import app, login_required
 from extensions import db
 from models.finance import (
     Transaction, TransactionType, DocumentType,
-    CategoryType, TransactionStatus, FiscalYear, BudgetAllocation, FiscalStatus
+    CategoryType, TransactionStatus, FiscalYear, BudgetAllocation
 )
 from models.user import Admin
 
@@ -22,27 +23,18 @@ def generate_doc_number(doc_type, fiscal_year_label):
 
     if last:
         last_num = int(last.transaction_docuNumber.split('-')[-1])
-        new_num = last_num + 1
+        new_num  = last_num + 1
     else:
         new_num = 1
 
     return f"{doc_type}-{fiscal_year_label}-{new_num:04d}"
 
 
-# ── Helper: Get Status IDs (Safe function) ───────────────────────────────────
-def get_status_ids():
-    """Get active/closed status IDs safely"""
-    with db.app.app_context():
-        active_id = db.session.query(FiscalStatus.id).filter_by(fiscal_type='active').scalar()
-        closed_id = db.session.query(FiscalStatus.id).filter_by(fiscal_type='closed').scalar()
-        return active_id, closed_id
-
-
 # ── Helper: Recalculate Running Balance ──────────────────────────────────────
 
 def recalculate_running_balance(fiscal_year_id):
     """
-    Recalculates and updates the running balance for all transactions
+    Recalculates and saves the running balance for every transaction
     in a fiscal year, ordered by date then id.
     """
     transactions = Transaction.query.filter_by(
@@ -54,7 +46,7 @@ def recalculate_running_balance(fiscal_year_id):
 
     balance = 0.00
     for t in transactions:
-        t_type = t.transaction_type.transaction_types  # 'Collection' or 'Disbursement'
+        t_type = t.transaction_type.transaction_types
         if t_type == 'Collection':
             balance += float(t.transaction_amount)
         else:
@@ -69,12 +61,17 @@ def recalculate_running_balance(fiscal_year_id):
 @app.route('/finances')
 @login_required
 def finances():
-    # ✅ FIXED: Get active fiscal year using fiscal_type_id
-    active_status_id, _ = get_status_ids()
-    active_fiscal_year = FiscalYear.query.filter_by(fiscal_type_id=active_status_id).first() if active_status_id else None
+    # Check if a specific fiscal year is selected via query param
+    fy_id = request.args.get('fy', type=int)
+
+    if fy_id:
+        active_fiscal_year = FiscalYear.query.get(fy_id)
+    else:
+        active_fiscal_year = FiscalYear.query.filter_by(status='active').first()
 
     transactions        = []
     budget_allocations  = []
+    monthly_chart_data  = []
     total_collections   = 0.00
     total_disbursements = 0.00
     current_balance     = 0.00
@@ -91,22 +88,55 @@ def finances():
             fiscal_year_id=active_fiscal_year.id
         ).all()
 
-        # KPI calculations
+        # KPI totals
         for t in transactions:
-            t_type = t.transaction_type.transaction_types
-            if t_type == 'Collection':
+            if t.transaction_type.transaction_types == 'Collection':
                 total_collections += float(t.transaction_amount)
             else:
                 total_disbursements += float(t.transaction_amount)
-
         current_balance = total_collections - total_disbursements
 
-    # Dropdown data for the modal
-    transaction_types   = TransactionType.query.all()
-    document_types      = DocumentType.query.all()
-    category_types      = CategoryType.query.all()
+        # Monthly chart data — grouped by month and type
+        monthly_raw = db.session.query(
+            func.month(Transaction.transaction_date).label('month'),
+            TransactionType.transaction_types.label('type'),
+            func.sum(Transaction.transaction_amount).label('total')
+        ).join(
+            TransactionType, Transaction.transaction_type_id == TransactionType.id
+        ).filter(
+            Transaction.fiscal_year_id == active_fiscal_year.id
+        ).group_by(
+            func.month(Transaction.transaction_date),
+            TransactionType.transaction_types
+        ).all()
+
+        # Build 12-month arrays for JS chart
+        revenue_by_month  = [0.0] * 12
+        expenses_by_month = [0.0] * 12
+        for row in monthly_raw:
+            idx = int(row.month) - 1
+            if row.type == 'Collection':
+                revenue_by_month[idx] = float(row.total)
+            else:
+                expenses_by_month[idx] = float(row.total)
+
+        monthly_chart_data = {
+            'revenue':  revenue_by_month,
+            'expenses': expenses_by_month,
+        }
+
+    # Dropdown data for modals
+    transaction_types    = TransactionType.query.all()
+    document_types       = DocumentType.query.all()
+    category_types       = CategoryType.query.all()
     transaction_statuses = TransactionStatus.query.all()
-    all_fiscal_years    = FiscalYear.query.order_by(FiscalYear.fiscal_year.desc()).all()
+    all_fiscal_years     = FiscalYear.query.order_by(FiscalYear.fiscal_year.desc()).all()
+
+    # Check if coming from edit route
+    edit_transaction = None
+    edit_id = request.args.get('edit_id', type=int)
+    if edit_id:
+        edit_transaction = Transaction.query.get(edit_id)
 
     return render_template(
         'BarangayAdmin/finances.html',
@@ -114,6 +144,7 @@ def finances():
         active_fiscal_year   = active_fiscal_year,
         transactions         = transactions,
         budget_allocations   = budget_allocations,
+        monthly_chart_data   = monthly_chart_data,
         total_collections    = total_collections,
         total_disbursements  = total_disbursements,
         current_balance      = current_balance,
@@ -122,6 +153,7 @@ def finances():
         category_types       = category_types,
         transaction_statuses = transaction_statuses,
         all_fiscal_years     = all_fiscal_years,
+        edit_transaction     = edit_transaction,
     )
 
 
@@ -148,48 +180,43 @@ def add_transaction():
             flash('Please fill in all required fields.', 'warning')
             return redirect(url_for('finances'))
 
-        # Get fiscal year label for doc number (e.g. '2026')
+        # Get fiscal year for doc number generation
         fiscal_year = FiscalYear.query.get_or_404(fiscal_year_id)
 
-        # Get document type — determined by transaction type
+        # Auto-determine doc type from transaction type
         transaction_type = TransactionType.query.get_or_404(transaction_type_id)
-        if transaction_type.transaction_types == 'Collection':
-            doc_type_label = 'OR'
-        else:
-            doc_type_label = 'DV'
+        doc_type_label   = 'OR' if transaction_type.transaction_types == 'Collection' else 'DV'
 
         doc_type = DocumentType.query.filter_by(document_types=doc_type_label).first()
         if not doc_type:
-            flash(f'Document type {doc_type_label} not found in database.', 'danger')
+            flash(f'Document type "{doc_type_label}" not found. Please seed the document_type table.', 'danger')
             return redirect(url_for('finances'))
 
-        # Auto-generate document number
+        # Generate document number
         doc_number = generate_doc_number(doc_type_label, fiscal_year.fiscal_year)
 
-        # Get admin id from session
-        admin = Admin.query.filter_by(id=session.get('user_id')).first()
-        admin_id = admin.id if admin else 1  # fallback
+        # Use session user_id as admin_id
+        admin_id = session.get('user_id')
 
-        # Create transaction (running balance calculated after insert)
         new_transaction = Transaction(
-            admin_id                = admin_id,
-            transaction_type_id     = transaction_type_id,
-            transaction_docuType_id = doc_type.id,
-            transaction_category_id = transaction_category_id,
-            fiscal_year_id          = fiscal_year_id,
-            transaction_status_id   = transaction_status_id,
-            transaction_amount      = transaction_amount,
-            transaction_docuNumber  = doc_number,
-            transaction_running_balance = 0.00,  # will be updated below
-            is_deposited            = is_deposited,
-            deposited_date          = deposited_date,
-            transaction_date        = transaction_date,
-            transaction_description = transaction_description,
+            admin_id                    = admin_id,
+            transaction_type_id         = transaction_type_id,
+            transaction_docuType_id     = doc_type.id,
+            transaction_category_id     = transaction_category_id,
+            fiscal_year_id              = fiscal_year_id,
+            transaction_status_id       = transaction_status_id,
+            transaction_amount          = transaction_amount,
+            transaction_docuNumber      = doc_number,
+            transaction_running_balance = 0.00,
+            is_deposited                = is_deposited,
+            deposited_date              = deposited_date,
+            transaction_date            = transaction_date,
+            transaction_description     = transaction_description,
         )
         db.session.add(new_transaction)
         db.session.commit()
 
-        # Recalculate running balance for the entire fiscal year
+        # Recalculate running balance for the fiscal year
         recalculate_running_balance(fiscal_year_id)
 
         flash(f'Transaction {doc_number} recorded successfully.', 'success')
@@ -206,34 +233,9 @@ def add_transaction():
 @app.route('/edit_transaction/<int:id>')
 @login_required
 def edit_transaction(id):
-    transaction = Transaction.query.get_or_404(id)
-
-    transactions = Transaction.query.filter_by(
-        fiscal_year_id=transaction.fiscal_year_id
-    ).order_by(Transaction.transaction_date.desc()).all()
-
-    transaction_types    = TransactionType.query.all()
-    document_types       = DocumentType.query.all()
-    category_types       = CategoryType.query.all()
-    transaction_statuses = TransactionStatus.query.all()
-    all_fiscal_years     = FiscalYear.query.order_by(FiscalYear.fiscal_year.desc()).all()
-    
-    # ✅ FIXED: Get active fiscal year
-    active_status_id, _ = get_status_ids()
-    active_fiscal_year = FiscalYear.query.filter_by(fiscal_type_id=active_status_id).first() if active_status_id else None
-
-    return render_template(
-        'BarangayAdmin/finances.html',
-        segment              = 'finances',
-        edit_transaction     = transaction,
-        transactions         = transactions,
-        active_fiscal_year   = active_fiscal_year,
-        transaction_types    = transaction_types,
-        document_types       = document_types,
-        category_types       = category_types,
-        transaction_statuses = transaction_statuses,
-        all_fiscal_years     = all_fiscal_years,
-    )
+    # Redirect back to finances page with edit_id param
+    # The finances route handles rendering the edit modal
+    return redirect(url_for('finances', edit_id=id))
 
 
 # ── Update Transaction ────────────────────────────────────────────────────────
@@ -242,8 +244,8 @@ def edit_transaction(id):
 @login_required
 def update_transaction():
     try:
-        transaction_id = request.form.get('transaction_id')
-        transaction    = Transaction.query.get_or_404(transaction_id)
+        transaction_id  = request.form.get('transaction_id')
+        transaction     = Transaction.query.get_or_404(transaction_id)
 
         transaction.transaction_type_id     = request.form.get('transaction_type_id')
         transaction.transaction_category_id = request.form.get('transaction_category_id')
@@ -257,7 +259,7 @@ def update_transaction():
 
         db.session.commit()
 
-        # Recalculate running balance after update
+        # Recalculate running balance
         recalculate_running_balance(transaction.fiscal_year_id)
 
         flash(f'Transaction {transaction.transaction_docuNumber} updated successfully.', 'success')
@@ -294,7 +296,7 @@ def delete_transaction(id):
     return redirect(url_for('finances'))
 
 
-# ── Fiscal Year Management ────────────────────────────────────────────────────
+# ── Add Fiscal Year ───────────────────────────────────────────────────────────
 
 @app.route('/fiscal_year/add', methods=['POST'])
 @login_required
@@ -314,114 +316,23 @@ def add_fiscal_year():
             flash(f'Fiscal Year {fiscal_year} already exists.', 'warning')
             return redirect(url_for('finances'))
 
-        # ✅ FIXED: Close existing active fiscal years
-        active_status_id, closed_status_id = get_status_ids()
-        if active_status_id and closed_status_id:
-            FiscalYear.query.filter_by(fiscal_type_id=active_status_id).update({
-                'fiscal_type_id': closed_status_id
-            })
-            db.session.commit()
+        # Close all currently active fiscal years
+        FiscalYear.query.filter_by(status='active').update({'status': 'closed'})
 
-        # ✅ FIXED: Create new FY with fiscal_type_id
         new_fy = FiscalYear(
-            fiscal_year            = fiscal_year,
-            total_approved_budget  = approved_budget,
-            ordinance_number       = ordinance_number,
-            ordinance_date         = ordinance_date,
-            fiscal_type_id         = active_status_id,  # ✅ Use FK ID
+            fiscal_year           = fiscal_year,
+            total_approved_budget = approved_budget,
+            ordinance_number      = ordinance_number,
+            ordinance_date        = ordinance_date,
+            status                = 'active',
         )
         db.session.add(new_fy)
         db.session.commit()
 
-        flash(f'Fiscal Year {fiscal_year} created successfully.', 'success')
+        flash(f'Fiscal Year {fiscal_year} created and set as active.', 'success')
 
     except Exception as e:
         db.session.rollback()
         flash(f'Error creating fiscal year: {str(e)}', 'danger')
 
     return redirect(url_for('finances'))
-
-
-@app.route('/finances/data')
-@login_required
-def finances_data():
-    """JSON endpoint for finances data"""
-    fiscal_year_id = request.args.get('fy')
-    
-    if fiscal_year_id:
-        transactions = Transaction.query.filter_by(fiscal_year_id=fiscal_year_id).order_by(
-            Transaction.transaction_date.desc(), Transaction.id.desc()
-        ).all()
-    else:
-        # ✅ FIXED: Get active FY
-        active_status_id, _ = get_status_ids()
-        active_fy = FiscalYear.query.filter_by(fiscal_type_id=active_status_id).first() if active_status_id else None
-        if active_fy:
-            transactions = Transaction.query.filter_by(fiscal_year_id=active_fy.id).order_by(
-                Transaction.transaction_date.desc(), Transaction.id.desc()
-            ).all()
-        else:
-            transactions = []
-
-    # Serialize data
-    tx_data = []
-    for t in transactions:
-        tx_data.append({
-            'id': t.id,
-            'transaction_date': t.transaction_date.isoformat(),
-            'transaction_description': t.transaction_description,
-            'transaction_amount': str(t.transaction_amount),
-            'transaction_running_balance': str(t.transaction_running_balance),
-            'transaction_docuNumber': t.transaction_docuNumber,
-            'transaction_type': {
-                'transaction_types': t.transaction_type.transaction_types
-            },
-            'document_type': {
-                'document_types': t.document_type.document_types
-            },
-            'category_type': {
-                'category_type': t.category_type.category_type
-            },
-            'transaction_status': {
-                'status_type': t.transaction_status.status_type
-            },
-            'is_deposited': t.is_deposited,
-            'deposited_date': t.deposited_date.isoformat() if t.deposited_date else None,
-            'fiscal_year_id': t.fiscal_year_id
-        })
-
-    # ✅ FIXED: Define budget_allocations
-    budget_allocations = BudgetAllocation.query.all()
-
-    return jsonify({
-        'transactions': tx_data,
-        'budget_allocations': [
-            {
-                'budget_amount': str(ba.budget_amount),
-                'category_type': {
-                    'category_type': ba.category_type.category_type
-                },
-                'budget_mandatory_percent': str(ba.budget_mandatory_percent) if ba.budget_mandatory_percent else None
-            }
-            for ba in budget_allocations
-        ]
-    })
-
-
-@app.route('/edit_transaction/<int:id>')
-@login_required
-def edit_transaction_json(id):
-    """JSON version for AJAX"""
-    transaction = Transaction.query.get_or_404(id)
-    return jsonify({
-        'id': transaction.id,
-        'fiscal_year_id': transaction.fiscal_year_id,
-        'transaction_type_id': transaction.transaction_type_id,
-        'transaction_category_id': transaction.transaction_category_id,
-        'transaction_status_id': transaction.transaction_status_id,
-        'transaction_date': transaction.transaction_date.isoformat(),
-        'transaction_amount': str(transaction.transaction_amount),
-        'transaction_description': transaction.transaction_description,
-        'is_deposited': transaction.is_deposited,
-        'deposited_date': transaction.deposited_date.isoformat() if transaction.deposited_date else None
-    })
