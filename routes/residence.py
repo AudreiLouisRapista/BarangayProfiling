@@ -1,3 +1,4 @@
+from asyncio import current_task
 from datetime import datetime, timezone
 from flask import render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash
@@ -119,7 +120,10 @@ def add_residence():
         flash('Residence added successfully.', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'Error adding residence: {str(e)}', 'danger')
+        # Log the actual error for developers
+        app.logger.error(f'Error adding residence: {str(e)}')
+        # Show-friendly message to user
+        flash('Unable to add residence. Double check your input or contact support.', 'danger')
 
     return redirect(url_for('residence'))
 

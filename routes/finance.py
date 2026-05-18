@@ -13,10 +13,6 @@ from models.user import Admin
 # ── Helper: Auto-generate Document Number ────────────────────────────────────
 
 def generate_doc_number(doc_type, fiscal_year_label):
-    """
-    Generates the next document number for a given doc type and fiscal year.
-    Format: OR-2026-0001, DV-2026-0001, etc.
-    """
     last = Transaction.query.filter(
         Transaction.transaction_docuNumber.like(f'{doc_type}-{fiscal_year_label}-%')
     ).order_by(Transaction.id.desc()).first()
@@ -33,10 +29,6 @@ def generate_doc_number(doc_type, fiscal_year_label):
 # ── Helper: Recalculate Running Balance ──────────────────────────────────────
 
 def recalculate_running_balance(fiscal_year_id):
-    """
-    Recalculates and saves the running balance for every transaction
-    in a fiscal year, ordered by date then id.
-    """
     transactions = Transaction.query.filter_by(
         fiscal_year_id=fiscal_year_id
     ).order_by(
