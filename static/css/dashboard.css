@@ -1,0 +1,14 @@
+   .bg-primary-subtle { background-color: #cfe2ff; }
+    .bg-success-subtle { background-color: #d1e7dd; }
+    .bg-warning-subtle { background-color: #fff3cd; }
+    .bg-info-subtle    { background-color: #cff4fc; }
+
+    .btn-outline-primary:hover,
+    .btn-outline-success:hover,
+    .btn-outline-danger:hover,
+    .btn-outline-info:hover,
+    .btn-outline-secondary:hover { color: white !important; }
+
+    .card { border-radius: 15px; transition: 0.3s ease; }
+    .card:hover { transform: translateY(-3px); }
+    .icon-box { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
