@@ -189,4 +189,139 @@
         }, DURATION);
     });
 
-})();
+}
+)();
+
+/* ═════════════════════════════════════════════════════════════
+   EXPORT TO EXCEL FUNCTIONS
+   ═════════════════════════════════════════════════════════════ */
+
+function exportFullReport() {
+    const wb = XLSX.utils.book_new();
+    
+    // ── Sheet 1: Summary ──
+    const summaryData = [
+        ['BARANGAY FINANCIAL MANAGEMENT REPORT'],
+        ['Fiscal Year', fiscalYearData],
+        ['Report Date', new Date().toLocaleDateString('en-PH', { 
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+        })],
+        [''],
+        ['SUMMARY'],
+        ['Approved Budget', approvedBudget],
+        ['Total Collections (YTD)', totalCollections],
+        ['Total Disbursements (YTD)', totalDisbursements],
+        ['Current Cash Balance', currentBalance],
+    ];
+    
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    wsSummary['!cols'] = [{ wch: 25 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+    
+    // ── Sheet 2: Cashbook ──
+    const cashbookData = [
+        ['Date', 'Description', 'Category', 'Doc Reference', 'Type', 'Amount', 'Running Balance', 'Status']
+    ];
+    
+    formattedTransactions.forEach(t => {
+        cashbookData.push([
+            t.date,
+            t.description,
+            t.category,
+            t.docNumber,
+            t.type,
+            t.amount,
+            t.runningBalance,
+            t.status
+        ]);
+    });
+    
+    const wsCashbook = XLSX.utils.aoa_to_sheet(cashbookData);
+    wsCashbook['!cols'] = [
+        { wch: 12 }, { wch: 30 }, { wch: 20 }, { wch: 18 },
+        { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 10 }
+    ];
+    
+    // Currency format
+    const range = XLSX.utils.decode_range(wsCashbook['!ref']);
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        const amountCell = XLSX.utils.encode_cell({ r: R, c: 5 });
+        const balanceCell = XLSX.utils.encode_cell({ r: R, c: 6 });
+        if (wsCashbook[amountCell]) wsCashbook[amountCell].z = '#,##0.00';
+        if (wsCashbook[balanceCell]) wsCashbook[balanceCell].z = '#,##0.00';
+    }
+    
+    XLSX.utils.book_append_sheet(wb, wsCashbook, 'Cashbook');
+    
+    // ── Sheet 3: Budget Allocations ──
+    const budgetSheetData = [
+        ['Category', 'Type', 'Mandatory %', 'Allocated Amount']
+    ];
+    
+    budgetData.forEach(b => {
+        budgetSheetData.push([
+            b.category_type.category_type,
+            b.category_type.type_nature,
+            b.budget_mandatory_percent || '',
+            parseFloat(b.budget_amount)
+        ]);
+    });
+    
+    const wsBudget = XLSX.utils.aoa_to_sheet(budgetSheetData);
+    wsBudget['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 18 }];
+    
+    // Currency format
+    const budgetRange = XLSX.utils.decode_range(wsBudget['!ref']);
+    for (let R = budgetRange.s.r + 1; R <= budgetRange.e.r; ++R) {
+        const cellRef = XLSX.utils.encode_cell({ r: R, c: 3 });
+        if (wsBudget[cellRef]) wsBudget[cellRef].z = '#,##0.00';
+    }
+    
+    XLSX.utils.book_append_sheet(wb, wsBudget, 'Budget Allocations');
+    
+    // Download
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `Financial_Report_FY${fiscalYearData}_${date}.xlsx`);
+}
+
+
+function exportCashbook() {
+    const wb = XLSX.utils.book_new();
+    
+    const cashbookData = [
+        ['Date', 'Description', 'Category', 'Doc Reference', 'Type', 'Amount', 'Running Balance', 'Status']
+    ];
+    
+    formattedTransactions.forEach(t => {
+        cashbookData.push([
+            t.date,
+            t.description,
+            t.category,
+            t.docNumber,
+            t.type,
+            t.amount,
+            t.runningBalance,
+            t.status
+        ]);
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet(cashbookData);
+    ws['!cols'] = [
+        { wch: 12 }, { wch: 35 }, { wch: 20 }, { wch: 18 },
+        { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 10 }
+    ];
+    
+    // Currency format
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        const amountCell = XLSX.utils.encode_cell({ r: R, c: 5 });
+        const balanceCell = XLSX.utils.encode_cell({ r: R, c: 6 });
+        if (ws[amountCell]) ws[amountCell].z = '#,##0.00';
+        if (ws[balanceCell]) ws[balanceCell].z = '#,##0.00';
+    }
+    
+    XLSX.utils.book_append_sheet(wb, ws, 'Cashbook');
+    
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `Cashbook_${date}.xlsx`);
+}

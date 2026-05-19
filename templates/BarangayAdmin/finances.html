@@ -3,7 +3,6 @@
 {% block head %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/finances.css') }}">
 {% endblock %}
-
 {% block content %}
 <div class="container-fluid pt-4 pb-5">
 
@@ -39,9 +38,27 @@
             <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#fiscalYearModal">
                 <i class="bi bi-calendar-plus me-1"></i> New Fiscal Year
             </button>
-            <button class="btn btn-outline-dark btn-sm" onclick="window.print()">
-                <i class="bi bi-printer me-1"></i> Print
-            </button>
+    <div class="btn-group">
+        <button class="btn btn-outline-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-file-earmark-excel me-1"></i> Export
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow">
+            <li>
+                <a class="dropdown-item" href="#" onclick="exportFullReport()">
+                    <i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i>
+                    <strong>Full Financial Report</strong>
+                    <div class="small text-muted">Summary + Cashbook + Budget</div>
+                </a>
+            </li>
+        <li>
+            <a class="dropdown-item" href="#" onclick="exportCashbook()">
+                <i class="bi bi-journal-text me-2 text-primary"></i>
+                <strong>Cashbook Only</strong>
+                <div class="small text-muted">Transaction register</div>
+            </a>
+        </li>
+        </ul>
+    </div>
         </div>
     </div>
 
@@ -648,6 +665,7 @@
 
 {% endblock %}
 
+
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
@@ -655,8 +673,32 @@
     const budgetAllocations = JSON.parse('{{ (budget_allocations | map(attribute="category_type") | map(attribute="category_type") | list) | tojson if budget_allocations else "[]" | safe }}');
     const budgetAmounts     = JSON.parse('{{ (budget_allocations | map(attribute="budget_amount")  | list) | tojson if budget_allocations else "[]" | safe }}');
     const monthlyData       = JSON.parse('{{ monthly_chart_data  | tojson if monthly_chart_data  else "[]" | safe }}');
+    
+    // ── Transaction Data for Excel Export (NOW FIXED) ──
+    const transactionsData = JSON.parse('{{ transactions_json | tojson }}');
+    
+    // Format transactions for easier access
+    const formattedTransactions = transactionsData.map(t => ({
+        date: t.transaction_date,
+        description: t.transaction_description,
+        category: t.category_type.category_type,
+        docNumber: t.transaction_docuNumber,
+        type: t.transaction_type.transaction_types,
+        amount: t.amount,
+        runningBalance: t.transaction_running_balance,
+        status: t.transaction_status.status_type
+    }));
+    
+    const budgetData = JSON.parse('{{ budget_allocations_json | tojson }}');
+    const fiscalYearData = JSON.parse('{{ active_fiscal_year.fiscal_year if active_fiscal_year else "N/A" }}');
+    const totalCollections = JSON.parse('{{ total_collections }}');
+    const totalDisbursements = JSON.parse('{{ total_disbursements }}');
+    const currentBalance = JSON.parse('{{ current_balance }}');
+    const approvedBudget = JSON.parse('{{ active_fiscal_year.total_approved_budget if active_fiscal_year else 0 }}');
 </script>
 <script src="{{ url_for('static', filename='js/finances.js') }}"></script>
+<!-- ── SheetJS for Excel Export ── -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
 {% if edit_transaction %}
 <script>

@@ -105,11 +105,25 @@ class BudgetAllocation(db.Model):
     fiscal_year_id              = db.Column(db.Integer, db.ForeignKey('fiscal_year.id'), nullable=False)
     transaction_category_id     = db.Column(db.Integer, db.ForeignKey('category_type.id'), nullable=False)
     budget_amount               = db.Column(db.Numeric(15, 2), nullable=False, default=0.00)
-    budget_mandatory_percent    = db.Column(db.Numeric(5, 2), nullable=True)  # NULL if not mandatory
-                                                                               # e.g. 20.00, 10.00, 5.00
+    budget_mandatory_percent    = db.Column(db.Numeric(5, 2), nullable=True)
 
     def __repr__(self):
         return f'<BudgetAllocation FY:{self.fiscal_year_id} Category:{self.transaction_category_id}>'
+    
+    def to_dict(self):
+        """Convert SQLAlchemy model to JSON-serializable dictionary"""
+        return {
+            'id': self.id,
+            'budget_amount': float(self.budget_amount),
+            'budget_mandatory_percent': float(self.budget_mandatory_percent) if self.budget_mandatory_percent else None,
+            'category_type': {
+                'category_type': self.category_type.category_type,
+                'type_nature': getattr(self.category_type, 'type_nature', None)
+            } if self.category_type else None,
+            'fiscal_year': {
+                'fiscal_year': self.fiscal_year.fiscal_year
+            } if self.fiscal_year else None,
+        }
 
 
 # ── Transaction ───────────────────────────────────────────────────────────────
@@ -125,9 +139,9 @@ class Transaction(db.Model):
     fiscal_year_id              = db.Column(db.Integer, db.ForeignKey('fiscal_year.id'), nullable=False)
     transaction_status_id       = db.Column(db.Integer, db.ForeignKey('transaction_status.id'), nullable=False)
     transaction_amount          = db.Column(db.Numeric(15, 2), nullable=False, default=0.00)
-    transaction_docuNumber      = db.Column(db.String(30), nullable=False, unique=True)   # auto-generated e.g. OR-2026-0001
+    transaction_docuNumber      = db.Column(db.String(30), nullable=False, unique=True)
     transaction_running_balance = db.Column(db.Numeric(15, 2), nullable=False, default=0.00)
-    is_deposited                = db.Column(db.Integer, nullable=False, default=0)        # 0 = No, 1 = Yes
+    is_deposited                = db.Column(db.Integer, nullable=False, default=0)
     deposited_date              = db.Column(db.Date, nullable=True)
     transaction_date            = db.Column(db.Date, nullable=False)
     transaction_description     = db.Column(db.String(255), nullable=False)
@@ -138,3 +152,29 @@ class Transaction(db.Model):
 
     def __repr__(self):
         return f'<Transaction {self.transaction_docuNumber} — ₱{self.transaction_amount}>'
+    
+    def to_dict(self):
+        """Convert SQLAlchemy model to JSON-serializable dictionary"""
+        return {
+            'id': self.id,
+            'transaction_date': self.transaction_date.isoformat() if self.transaction_date else None,
+            'transaction_description': self.transaction_description,
+            'transaction_docuNumber': self.transaction_docuNumber,
+            'transaction_amount': float(self.transaction_amount),
+            'transaction_running_balance': float(self.transaction_running_balance),
+            'is_deposited': self.is_deposited,
+            'deposited_date': self.deposited_date.isoformat() if self.deposited_date else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            # Nested relationships
+            'category_type': {
+                'category_type': self.category_type.category_type,
+                'type_nature': getattr(self.category_type, 'type_nature', None)
+            } if self.category_type else None,
+            'transaction_type': {
+                'transaction_types': self.transaction_type.transaction_types
+            } if self.transaction_type else None,
+            'transaction_status': {
+                'status_type': self.transaction_status.status_type
+            } if self.transaction_status else None,
+        }

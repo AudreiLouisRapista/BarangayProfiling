@@ -129,6 +129,10 @@ def finances():
     edit_id = request.args.get('edit_id', type=int)
     if edit_id:
         edit_transaction = Transaction.query.get(edit_id)
+    
+     # Convert transactions to JSON-serializable format
+    transactions_json = [t.to_dict() for t in transactions]
+    budget_allocations_json = [b.to_dict() for b in budget_allocations]
 
     return render_template(
         'BarangayAdmin/finances.html',
@@ -146,6 +150,8 @@ def finances():
         transaction_statuses = transaction_statuses,
         all_fiscal_years     = all_fiscal_years,
         edit_transaction     = edit_transaction,
+        transactions_json = transactions_json,
+        budget_allocations_json = budget_allocations_json,
     )
 
 
